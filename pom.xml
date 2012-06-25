@@ -14,7 +14,7 @@
 
     <name>maven-doctest-plugin Maven Mojo</name>
     <inceptionYear>2012</inceptionYear>
-    <url>https://github.com/maven-plugins/maven-doctest-plugin</url>
+    <url>https://github.com/mavenplugins/maven-doctest-plugin</url>
     <description>A simple Mojo for Restful Webservice integration Testing with self-contained documentation.</description>
 
     <contributors>
@@ -36,9 +36,9 @@
     </licenses>
 
     <scm>
-        <connection>scm:git:git@github.com:maven-plugins/maven-doctest-plugin.git</connection>
-        <developerConnection>scm:git:git@github.com:maven-plugins/maven-doctest-plugin.git</developerConnection>
-        <url>git@github.com:maven-plugins/maven-doctest-plugin.git</url>
+        <connection>scm:git:git@github.com:mavenplugins/maven-doctest-plugin.git</connection>
+        <developerConnection>scm:git:git@github.com:mavenplugins/maven-doctest-plugin.git</developerConnection>
+        <url>git@github.com:mavenplugins/maven-doctest-plugin.git</url>
     </scm>
 
     <properties>
