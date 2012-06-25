@@ -4,45 +4,47 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <title>RAT (Release Audit Tool) results</title>
-    <style type="text/css" media="all">
-      @import url("./css/maven-base.css");
-      @import url("./css/maven-theme.css");
-      @import url("./css/site.css");
-    </style>
-    <link rel="stylesheet" href="./css/print.css" type="text/css" media="print" />
+    <link rel="stylesheet" href="./css/apache-maven-fluido.min.css" />
+    <link rel="stylesheet" href="./css/site.css" />
+    <link rel="stylesheet" href="./css/print.css" media="print" />
+        <style>body{padding-top: 20px;}</style>
+    
+    <script type="text/javascript" src="./js/apache-maven-fluido.min.js"></script>
+
+    
     <meta name="Date-Revision-yyyymmdd" content="20120625" />
     <meta http-equiv="Content-Language" content="en" />
-        
+    
         </head>
-  <body class="composite">
-    <div id="banner">
-                    <div id="bannerLeft">
-                maven-doctest-plugin Maven Mojo
-                </div>
-                    <div class="clear">
-        <hr/>
-      </div>
-    </div>
-    <div id="breadcrumbs">
-            
+  <body>
         
-                <div class="xleft">
-        <span id="publishDate">Last Published: 2012-06-25</span>
-                  &nbsp;| <span id="projectVersion">Version: 1.0.0</span>
-                      </div>
-            <div class="xright">                    <a href="./" title="maven-doctest-plugin Maven Mojo">maven-doctest-plugin Maven Mojo</a>
-              
-        
+    
+        <div class="container-fluid">
+                <div id="banner">
+        <div class="pull-left">                                <a href="./" id="bannerLeft">
+                <h2>maven-doctest-plugin Maven Mojo</h2>
+                </a>
       </div>
-      <div class="clear">
-        <hr/>
+        <div class="pull-right">  </div>
+        <div class="clear"><hr/></div>
       </div>
-    </div>
-    <div id="leftColumn">
-      <div id="navcolumn">
-             
+      
+      <div id="breadcrumbs">
+        <ul class="breadcrumb">
+                
         
-                                          <h5>Project Documentation</h5>
+                  <li id="publishDate">Last Published: 2012-06-25</li>
+                  <li class="divider">|</li> <li id="projectVersion">Version: 1.0.0</li>
+                                      
+        
+              </ul>
+      </div>
+
+            <div id="leftColumn" class="sidebar">
+        <div class="well">
+                
+        
+                                             <h5>Project Documentation</h5>
                   <ul>
                                                                                                                                                                                                                                                                           <li class="collapsed">
                           <a href="project-info.html" title="Project Information">Project Information</a>
@@ -68,24 +70,30 @@
               </ul>
         </li>
           </ul>
-                             <a href="http://maven.apache.org/" title="Built by Maven" class="poweredBy">
-        <img class="poweredBy" alt="Built by Maven" src="./images/logos/maven-feather.png" />
-      </a>
-                   
+                      
         
-            </div>
-    </div>
-    <div id="bodyColumn">
-      <div id="contentBox">
-        <div class="section"><h2>RAT (Release Audit Tool) results<a name="RAT_Release_Audit_Tool_results"></a></h2><p>The following document contains the results of <a class="externalLink" href="http://incubator.apache.org/rat/apache-rat-plugin">RAT (Release Audit Tool)</a>.</p><p></p><div class="source"><pre>
+      
+          
+          <div id="poweredBy">
+                                                                                                                  <a href="https://buildhive.cloudbees.com/" title="Built by Maven" class="poweredBy">
+        <img class="poweredBy"  alt="Built by Maven" src="http://www.cloudbees.com/sites/default/files/Button-Built-on-CB-1.png"    />
+      </a>
+                    </div>
+        </div>
+      </div>
+      
+      <div id="bodyColumn" class="content">
+        <div id="contentBox">
+                              
+          <div class="section"><h2>RAT (Release Audit Tool) results<a name="RAT_Release_Audit_Tool_results"></a></h2><p>The following document contains the results of <a class="externalLink" href="http://incubator.apache.org/rat/apache-rat-plugin">RAT (Release Audit Tool)</a>.</p><p></p><div class="source"><pre class="prettyprint">
 *****************************************************
 Summary
 -------
-Generated at: 2012-06-25T23:02:21+02:00
+Generated at: 2012-06-25T23:05:31+02:00
 Notes: 1
 Binaries: 14
 Archives: 0
-Standards: 37
+Standards: 38
 
 Apache Licensed: 4
 Generated Documents: 0
@@ -93,7 +101,7 @@ Generated Documents: 0
 JavaDocs are generated and so license header is optional
 Generated files do not required license headers
 
-33 Unknown Licenses
+34 Unknown Licenses
 
 *******************************
 
@@ -132,6 +140,7 @@ Unapproved licenses:
   .git/refs/remotes/origin/master
   .gitignore
   README.markdown
+  src/site/site.xml
 
 *******************************
 
@@ -194,6 +203,7 @@ Archives:
  !????? README.markdown
   AL    src/main/java/com/github/mavenplugins/DoctestReportMojo.java
   AL    src/main/java/com/github/mavenplugins/DoctestTestMojo.java
+ !????? src/site/site.xml
  
  *****************************************************
  Printing headers for files without AL header...
@@ -638,21 +648,51 @@ c76d27d2ed6fe5cd95459d808123c14e5eb48638
 http://mavenplugins.github.com/maven-doctest-plugin/
 
 
+
+ =======================================================================
+ ==src/site/site.xml
+ =======================================================================
+&lt;project xmlns=&quot;http://maven.apache.org/DECORATION/1.1.0&quot;
+         xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;
+         xsi:schemaLocation=&quot;http://maven.apache.org/DECORATION/1.1.0 http://maven.apache.org/xsd/decoration-1.1.0.xsd&quot;
+         name=&quot;${project.name}&quot;&gt;
+    &lt;bannerLeft&gt;
+        &lt;name&gt;${project.name}&lt;/name&gt;
+        &lt;href&gt;${project.url}&lt;/href&gt;
+    &lt;/bannerLeft&gt;
+    &lt;poweredBy&gt;
+        &lt;logo href=&quot;https://buildhive.cloudbees.com/&quot; img=&quot;http://www.cloudbees.com/sites/default/files/Button-Built-on-CB-1.png&quot;/&gt;
+    &lt;/poweredBy&gt;
+    &lt;body&gt;
+        &lt;links&gt;
+            &lt;item name=&quot;Apache&quot; href=&quot;http://www.apache.org/&quot;/&gt;
+            &lt;item name=&quot;Maven 1.x&quot; href=&quot;http://maven.apache.org/maven-1.x/&quot;/&gt;
+            &lt;item name=&quot;Maven 2&quot; href=&quot;http://maven.apache.org/&quot;/&gt;
+            &lt;item name=&quot;${project.name}&quot; href=&quot;${project.url}&quot;/&gt;
+        &lt;/links&gt;
+        &lt;menu ref=&quot;parent&quot;/&gt;
+        &lt;menu ref=&quot;modules&quot;/&gt;
+        &lt;menu ref=&quot;reports&quot;/&gt;
+    &lt;/body&gt;
+    &lt;skin&gt;
+        &lt;groupId&gt;org.apache.maven.skins&lt;/groupId&gt;
+        &lt;artifactId&gt;maven-fluido-skin&lt;/artifactId&gt;
+        &lt;version&gt;1.0&lt;/version&gt;
+    &lt;/skin&gt;
+&lt;/project&gt;
 </pre></div></div>
+                  </div>
       </div>
     </div>
-    <div class="clear">
-      <hr/>
-    </div>
-    <div id="footer">
-      <div class="xright">
-              Copyright &#169;                   2012.
+
+    <footer class="footer">
+            <div class="container-fluid">
+              <div class="row span16">Copyright &copy;                   2012.
           All Rights Reserved.      
         
-                  </div>
-      <div class="clear">
-        <hr/>
       </div>
-    </div>
+
+                      </div>
+    </footer>
   </body>
 </html>
