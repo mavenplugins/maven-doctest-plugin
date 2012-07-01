@@ -43,7 +43,7 @@ public class PrepareMojo extends AbstractMojo {
     /**
      * The directory where the doctest result are written to.
      * 
-     * @parameter expression="${project.reporting.doctestOutputDirectory}" default-value="${project.reporting.outputDirectory}/doctests/"
+     * @parameter expression="${project.reporting.doctestOutputDirectory}" default-value="${project.outputDirectory}/doctests/"
      */
     private String doctestResultPath;
     
@@ -51,7 +51,7 @@ public class PrepareMojo extends AbstractMojo {
      * The preference back store is used to transfer data between this maven plugin and the actual doctests, which doesn't know anything about the maven project
      * configuration or this plugin.
      */
-    private Preferences prefs = Preferences.userNodeForPackage(AbstractDoctest.class);
+    private Preferences prefs = Preferences.userNodeForPackage(DoctestRunner.class);
     
     public String getDoctestResultPath() {
         return doctestResultPath;
@@ -72,8 +72,8 @@ public class PrepareMojo extends AbstractMojo {
     public void execute() throws MojoExecutionException, MojoFailureException {
         try {
             prefs.sync();
-            prefs.put(AbstractDoctest.TEST_SOURCE_PATH, project.getBuild().getTestSourceDirectory());
-            prefs.put(AbstractDoctest.RESULT_PATH, doctestResultPath);
+            prefs.put(DoctestRunner.TEST_SOURCE_PATH, project.getBuild().getTestSourceDirectory());
+            prefs.put(DoctestRunner.RESULT_PATH, doctestResultPath);
         } catch (BackingStoreException exception) {
             getLog().error("error while setting test-class path to java back-store", exception);
         }

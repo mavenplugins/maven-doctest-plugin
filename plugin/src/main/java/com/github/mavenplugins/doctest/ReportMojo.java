@@ -52,7 +52,7 @@ public class ReportMojo extends AbstractMavenReport {
      */
     private MavenProject project;
     
-    protected Preferences prefs = Preferences.userNodeForPackage(AbstractDoctest.class);
+    protected Preferences prefs = Preferences.userNodeForPackage(DoctestRunner.class);
     
     @Override
     protected String getOutputDirectory() {
@@ -100,8 +100,8 @@ public class ReportMojo extends AbstractMavenReport {
         
         try {
             prefs.sync();
-            doctestResults = prefs.get(AbstractDoctest.RESULT_PATH, "");
-            getLog().info("Doctest results are in " + doctestResults);
+            doctestResults = prefs.get(DoctestRunner.RESULT_PATH, "");
+            getLog().info("MyDoctest results are in " + doctestResults);
             prefs.removeNode();
         } catch (BackingStoreException exception) {
             exception.printStackTrace();

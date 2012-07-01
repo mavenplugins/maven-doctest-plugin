@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <artifactId>parent</artifactId>
-        <groupId>com.github.mavenplugins.doctest</groupId>
+        <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
         <version>1.0.0</version>
         <relativePath>..</relativePath>
     </parent>
@@ -29,17 +29,16 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-site-plugin</artifactId>
-                <version>3.0</version>
-                <configuration>
-                    <siteDirectory>${project.basedir}/src/site</siteDirectory>
-                </configuration>
-            </plugin>
-            <plugin>
                 <groupId>com.github.mavenplugins.doctest</groupId>
-                <artifactId>plugin</artifactId>
+                <artifactId>doctest-plugin</artifactId>
                 <version>1.0.0</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>junit</groupId>
+                        <artifactId>junit</artifactId>
+                        <version>4.10</version>
+                    </dependency>
+                </dependencies>
                 <executions>
                     <execution>
                         <goals>
@@ -69,11 +68,13 @@
             <groupId>javax.jws</groupId>
             <artifactId>jsr181-api</artifactId>
             <version>1.0-MR1</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>javax.xml.ws</groupId>
             <artifactId>jaxws-api</artifactId>
             <version>2.2.8</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -81,7 +82,7 @@
         <plugins>
             <plugin>
                 <groupId>com.github.mavenplugins.doctest</groupId>
-                <artifactId>plugin</artifactId>
+                <artifactId>doctest-plugin</artifactId>
                 <version>1.0.0</version>
             </plugin>
         </plugins>

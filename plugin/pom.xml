@@ -2,12 +2,12 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <artifactId>parent</artifactId>
-        <groupId>com.github.mavenplugins.doctest</groupId>
+        <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
         <version>1.0.0</version>
         <relativePath>..</relativePath>
     </parent>
     <name>Doctest Maven Mojo</name>
-    <artifactId>plugin</artifactId>
+    <artifactId>doctest-plugin</artifactId>
     <packaging>maven-plugin</packaging>
     <description>A simple Mojo for Restful Webservice integration Testing with self-contained documentation.</description>
 
