@@ -9,7 +9,9 @@ import java.io.PrintStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.prefs.Preferences;
 
@@ -58,6 +60,8 @@ import com.github.mavenplugins.doctest.formatter.EntityFormatter;
 
 public class DoctestRunner extends BlockJUnit4ClassRunner {
     
+    private static final String[] EMPTY_STRING_ARRAY = new String[] {};
+    
     public static final String TEST_SOURCE_PATH = "doctest.sources.path";
     public static final String RESULT_PATH = "doctest.result.path";
     private static final RequestAcceptEncoding REQUEST_GZIP_INTERCEPTOR = new RequestAcceptEncoding();
@@ -97,7 +101,10 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
                 client.addRequestInterceptor(new HttpRequestInterceptor() {
                     
                     public void process(HttpRequest request, HttpContext context) throws HttpException, IOException {
-                        saveRequest(method, request);
+                        try {
+                            saveRequest(method, request);
+                        } catch (Exception exception) {
+                        }
                     }
                     
                 });
@@ -166,22 +173,23 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         }
     }
     
-    protected void saveRequest(FrameworkMethod method, HttpRequest request) throws IOException {
+    protected void saveRequest(FrameworkMethod method, HttpRequest request) throws Exception {
         File file = new File(path, getRequestResultFileName(method));
         PrintStream stream = null;
+        RequestResultWrapper wrapper;
         
         try {
             stream = new PrintStream(file);
             
-            printRequestLine(request, stream);
-            stream.println();
-            printRequestHeaders(request, stream);
-            stream.println();
-            printRequestParameters(request, stream);
+            wrapper = new RequestResultWrapper();
+            setRequestLine(request, wrapper);
+            setRequestHeaders(request, wrapper);
+            setRequestParameters(request, wrapper);
             if (request instanceof HttpEntityEnclosingRequest) {
-                stream.println();
-                printRequestEntity(request, stream);
+                setRequestEntity(request, wrapper);
             }
+            
+            jsonMapper.writeValue(stream, wrapper);
         } finally {
             stream.flush();
             stream.close();
@@ -192,56 +200,66 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         return getTestClass().getJavaClass().getName() + "-" + method.getName() + ".request";
     }
     
-    protected void printRequestEntity(HttpRequest request, PrintStream stream) throws IOException {
-        ((HttpEntityEnclosingRequest) request).getEntity().writeTo(stream);
+    protected void setRequestEntity(HttpRequest request, RequestResultWrapper wrapper) throws IOException {
+        wrapper.setEntity(EntityUtils.toString(((HttpEntityEnclosingRequest) request).getEntity()));
     }
     
-    protected void printRequestParameters(HttpRequest request, PrintStream stream) {
+    protected void setRequestParameters(HttpRequest request, RequestResultWrapper wrapper) {
         HttpParams parameters = request.getParams();
+        List<String> parameterValues = new ArrayList<String>();
         
         if (parameters instanceof HttpParamsNames) {
             try {
                 for (String name : ((HttpParamsNames) parameters).getNames()) {
-                    stream.print(name);
-                    stream.print(": ");
-                    stream.println(parameters.getParameter(name));
+                    parameterValues.add(name + ": " + parameters.getParameter(name));
                 }
             } catch (UnsupportedOperationException exception) {
             }
         }
+        
+        wrapper.setParemeters(parameterValues.toArray(EMPTY_STRING_ARRAY));
     }
     
-    protected void printRequestHeaders(HttpRequest request, PrintStream stream) {
+    protected void setRequestHeaders(HttpRequest request, RequestResultWrapper wrapper) {
+        String[] headerValues = new String[request.getAllHeaders().length];
+        int index = 0;
+        
         for (Header headers : request.getAllHeaders()) {
-            stream.print(headers.getName());
-            stream.print(": ");
-            stream.println(headers.getValue());
+            headerValues[index++] = headers.getName() + ": " + headers.getValue();
         }
+        
+        wrapper.setHeader(headerValues);
     }
     
-    protected void printRequestLine(HttpRequest request, PrintStream stream) {
-        stream.print(request.getRequestLine().getProtocolVersion().toString());
-        stream.print(' ');
-        stream.print(request.getRequestLine().getMethod());
-        stream.print(' ');
-        stream.println(request.getRequestLine().getUri());
+    protected void setRequestLine(HttpRequest request, RequestResultWrapper wrapper) throws URISyntaxException {
+        StringBuilder builder = new StringBuilder();
+        
+        builder.append(request.getRequestLine().getProtocolVersion().toString());
+        builder.append(' ');
+        builder.append(request.getRequestLine().getMethod());
+        builder.append(' ');
+        builder.append(request.getRequestLine().getUri());
+        
+        wrapper.setRequestLine(builder.toString());
+        wrapper.setPath(new URI(request.getRequestLine().getUri()).getRawPath());
     }
     
     protected void saveResponse(FrameworkMethod method, Object test, HttpResponse response, byte[] responseData) throws Exception {
         File file = new File(path, getResponseResultFileName(method));
         PrintStream stream = null;
         Doctest doctest = method.getMethod().getAnnotation(Doctest.class);
+        ResponseResultWrapper wrapper;
         
         try {
             stream = new PrintStream(file);
             
-            printResponseLine(response, stream);
-            stream.println();
-            printResponseHeaders(response, stream);
-            stream.println();
-            printResponseParameters(response, stream);
-            stream.println();
-            printResponseEntity(method, test, response, responseData, stream, doctest.formatter());
+            wrapper = new ResponseResultWrapper();
+            setResponseLine(response, wrapper);
+            setResponseHeaders(response, wrapper);
+            setResponseParameters(response, wrapper);
+            setResponseEntity(method, test, response, responseData, wrapper, doctest.formatter());
+            
+            jsonMapper.writeValue(stream, wrapper);
         } finally {
             stream.flush();
             stream.close();
@@ -252,47 +270,55 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         return getTestClass().getJavaClass().getName() + "-" + method.getName() + ".response";
     }
     
-    protected void printResponseEntity(FrameworkMethod method, Object test, HttpResponse response, byte[] responseData, PrintStream stream,
+    protected void setResponseEntity(FrameworkMethod method, Object test, HttpResponse response, byte[] responseData, ResponseResultWrapper wrapper,
             Class<? extends EntityFormatter> formmterType) throws InstantiationException, IllegalAccessException, InvocationTargetException,
             NoSuchMethodException, Exception, IOException {
         EntityFormatter formatter;
         
         if ((formatter = instance(method, test, formmterType)) != null) {
-            stream.print(formatter.format(response.getEntity(), responseData));
+            wrapper.setEntity(formatter.format(response.getEntity(), responseData));
         } else {
-            stream.write(responseData);
+            wrapper.setEntity(new String(responseData));
         }
     }
     
-    protected void printResponseParameters(HttpResponse response, PrintStream stream) {
-        HttpParams parameters;
-        parameters = response.getParams();
+    protected void setResponseParameters(HttpResponse response, ResponseResultWrapper wrapper) {
+        HttpParams parameters = response.getParams();
+        List<String> parameterValues = new ArrayList<String>();
+        
         if (parameters instanceof HttpParamsNames) {
             try {
                 for (String name : ((HttpParamsNames) parameters).getNames()) {
-                    stream.print(name);
-                    stream.print(": ");
-                    stream.println(parameters.getParameter(name));
+                    parameterValues.add(name + ": " + parameters.getParameter(name));
                 }
             } catch (UnsupportedOperationException exception) {
             }
         }
+        
+        wrapper.setParemeters(parameterValues.toArray(EMPTY_STRING_ARRAY));
     }
     
-    protected void printResponseHeaders(HttpResponse response, PrintStream stream) {
+    protected void setResponseHeaders(HttpResponse response, ResponseResultWrapper wrapper) {
+        String[] headerValues = new String[response.getAllHeaders().length];
+        int index = 0;
+        
         for (Header headers : response.getAllHeaders()) {
-            stream.print(headers.getName());
-            stream.print(": ");
-            stream.println(headers.getValue());
+            headerValues[index++] = headers.getName() + ": " + headers.getValue();
         }
+        
+        wrapper.setHeader(headerValues);
     }
     
-    protected void printResponseLine(HttpResponse response, PrintStream stream) {
-        stream.print(response.getStatusLine().getProtocolVersion().toString());
-        stream.print(' ');
-        stream.print(response.getStatusLine().getStatusCode());
-        stream.print(' ');
-        stream.println(response.getStatusLine().getReasonPhrase());
+    protected void setResponseLine(HttpResponse response, ResponseResultWrapper wrapper) {
+        StringBuilder builder = new StringBuilder();
+        
+        builder.append(response.getStatusLine().getProtocolVersion().toString());
+        builder.append(' ');
+        builder.append(response.getStatusLine().getStatusCode());
+        builder.append(' ');
+        builder.append(response.getStatusLine().getReasonPhrase());
+        
+        wrapper.setStatusLine(builder.toString());
     }
     
     protected <T> T instance(FrameworkMethod method, Object test, Class<T> type) throws InstantiationException, IllegalAccessException,

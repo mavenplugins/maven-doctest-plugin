@@ -30,7 +30,7 @@ import org.w3c.dom.Document;
 import com.github.mavenplugins.doctest.formatter.XmlPrettyPrinter;
 
 @RunWith(DoctestRunner.class)
-public class MyDoctest {
+public class MySecondDoctest {
     
     class Resource1 extends AbstractRequestData {
         

@@ -29,7 +29,7 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>com.github.mavenplugins.doctest</groupId>
+                <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
                 <version>1.0.0</version>
                 <dependencies>
@@ -53,7 +53,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.github.mavenplugins.doctest</groupId>
+            <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest</artifactId>
             <version>1.0.0</version>
             <scope>test</scope>
@@ -79,9 +79,10 @@
     </dependencies>
 
     <reporting>
+        <excludeDefaults>true</excludeDefaults>
         <plugins>
             <plugin>
-                <groupId>com.github.mavenplugins.doctest</groupId>
+                <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
                 <version>1.0.0</version>
             </plugin>

@@ -19,14 +19,9 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.github.mavenplugins.doctest</groupId>
+            <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest</artifactId>
             <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest-core</artifactId>
-            <version>1.2.1</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven</groupId>

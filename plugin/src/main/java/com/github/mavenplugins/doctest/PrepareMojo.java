@@ -43,7 +43,7 @@ public class PrepareMojo extends AbstractMojo {
     /**
      * The directory where the doctest result are written to.
      * 
-     * @parameter expression="${project.reporting.doctestOutputDirectory}" default-value="${project.outputDirectory}/doctests/"
+     * @parameter expression="${project.reporting.doctestOutputDirectory}" default-value="${project.build.outputDirectory}/../doctests/"
      */
     private String doctestResultPath;
     
