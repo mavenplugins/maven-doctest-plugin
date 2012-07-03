@@ -23,8 +23,12 @@ import java.util.ResourceBundle;
 import java.util.TreeMap;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpResponse;
 import org.apache.maven.doxia.sink.Sink;
 import org.apache.maven.doxia.sink.SinkEventAttributeSet;
 import org.apache.maven.doxia.siterenderer.Renderer;
@@ -46,8 +50,13 @@ import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicInteger;
  */
 public class ReportMojo extends AbstractMavenReport {
     
+    private static final String LINE_SEPARATOR = System.getProperty("line.separator");
+    private static final Pattern JAVADOC_STAR_FINDER = Pattern.compile("^\\s*\\*\\s?", Pattern.MULTILINE);
+    private static final Pattern JAVADOC_EMPTYLINE_FINDER = Pattern.compile("^\\s*\\*\\s*$", Pattern.MULTILINE);
+    private static final Pattern ANY_METHOD_FINDER = Pattern.compile(
+            "public\\s+void\\s+.*\\s*\\((HttpResponse|" + HttpResponse.class.getName().replaceAll("\\.", "\\\\.") + ")", Pattern.CASE_INSENSITIVE
+                    | Pattern.MULTILINE);
     private static final SinkEventAttributeSet TABLE_CELL_STYLE_ATTRIBUTES = new SinkEventAttributeSet(new String[] { "style", "width:150px;" });
-    
     private static final String JAVASCRIPT_CODE = "<script type=\"text/javascript\">function toggleVisibility(t){var e=document.getElementById(t);if(e.style.display=='block'){e.style.display='none';}else{e.style.display='block';}}</script>";
     private static final String CSS_CODE = "<style type=\"text/css\">.hiddenAtInitialization{display: none;}</style>";
     
@@ -256,9 +265,11 @@ public class ReportMojo extends AbstractMavenReport {
                 sink.text(doctest.getKey());
                 sink.sectionTitle3_();
                 
-                sink.paragraph();
-                sink.rawText(doctest.getValue().getJavaDoc());
-                sink.paragraph_();
+                if (!StringUtils.isEmpty(doctest.getValue().getJavaDoc())) {
+                    sink.verbatim(SinkEventAttributeSet.BOXED);
+                    sink.rawText(doctest.getValue().getJavaDoc());
+                    sink.verbatim_();
+                }
                 
                 sink.table();
                 
@@ -372,6 +383,7 @@ public class ReportMojo extends AbstractMavenReport {
         String tmp;
         String className;
         String doctestName;
+        String source;
         DoctestsContainer endpoint;
         DoctestData doctest;
         RequestResultWrapper requestResult;
@@ -382,11 +394,13 @@ public class ReportMojo extends AbstractMavenReport {
             if (tmp.endsWith(".request")) {
                 tmp = tmp.substring(0, tmp.lastIndexOf('.'));
                 className = tmp.substring(doctestResultDirectoryName.length(), tmp.indexOf('-', doctestResultDirectoryName.length()));
+                className = className.replaceAll("\\.", "/") + ".java";
                 doctestName = tmp.substring(tmp.indexOf('-', doctestResultDirectoryName.length()) + 1);
                 
                 try {
                     requestResult = mapper.readValue(new File(tmp + ".request"), RequestResultWrapper.class);
                     responseResult = mapper.readValue(new File(tmp + ".response"), ResponseResultWrapper.class);
+                    source = FileUtils.readFileToString(new File(project.getBuild().getTestSourceDirectory(), className));
                     
                     tmp = tmp.substring(doctestResultDirectoryName.length()).replace('-', '.');
                     endpoint = endpoints.get(requestResult.getPath());
@@ -407,9 +421,8 @@ public class ReportMojo extends AbstractMavenReport {
                     responseResult.setHeader(escapeToHtml(responseResult.getHeader()));
                     responseResult.setParemeters(escapeToHtml(responseResult.getParemeters()));
                     
-                    // TODO: get javadoc for the method
-                    
                     doctest = new DoctestData();
+                    doctest.setJavaDoc(getJavaDoc(source, doctestName));
                     doctest.setName(tmp);
                     doctest.setRequest(requestResult);
                     doctest.setResponse(responseResult);
@@ -421,6 +434,38 @@ public class ReportMojo extends AbstractMavenReport {
         }
     }
     
+    protected String getJavaDoc(String source, String method) {
+        Pattern methodPattern = Pattern.compile(
+                "public\\s+void\\s+" + method + "\\s*\\((HttpResponse|" + HttpResponse.class.getName().replaceAll("\\.", "\\\\.") + ")",
+                Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
+        Matcher matcher = methodPattern.matcher(source);
+        int start, tmp, last, comment;
+        String doc;
+        
+        if (matcher.find()) {
+            start = matcher.start();
+            last = -1;
+            matcher = ANY_METHOD_FINDER.matcher(source);
+            while (matcher.find() && (tmp = matcher.start()) < start) {
+                last = tmp;
+            }
+            
+            comment = source.lastIndexOf("/**", start);
+            
+            if (comment > 2 && (comment > last || last == -1)) {
+                doc = source.substring(comment, source.indexOf("*/", comment));
+                doc = doc.substring(3, doc.length() - 2);
+                doc = JAVADOC_EMPTYLINE_FINDER.matcher(doc).replaceAll(LINE_SEPARATOR);
+                doc = JAVADOC_STAR_FINDER.matcher(doc).replaceAll("");
+                doc = StringUtils.replace(doc, " ", "&nbsp;");
+                doc = StringUtils.replace(doc, LINE_SEPARATOR, "<br/>");
+                return doc;
+            }
+        }
+        
+        return "";
+    }
+    
     protected String[] escapeToHtml(String[] texts) {
         for (int i = 0; i < texts.length; i++) {
             texts[i] = escapeToHtml(texts[i]);
@@ -429,7 +474,7 @@ public class ReportMojo extends AbstractMavenReport {
     }
     
     protected String escapeToHtml(String text) {
-        return StringUtils.replace(StringUtils.replace(HtmlTools.escapeHTML(text, false), "&amp;#", "&#"), "\n", "<br/>");
+        return StringUtils.replace(StringUtils.replace(HtmlTools.escapeHTML(text, false), "&amp;#", "&#"), LINE_SEPARATOR, "<br/>");
     }
     
 }

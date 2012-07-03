@@ -70,6 +70,14 @@ public class MyDoctest {
      * SERVER FOR TESTING (JUST AN EXAMPLE)
      */
     
+    /**
+     * My Doctest doc.
+     * new line
+     * 
+     * 
+     * @param custom
+     *            annotation
+     */
     @Doctest(value = Resource1.class, formatter = XmlPrettyPrinter.class)
     public void resource1(HttpResponse response, Document document) throws Exception {
     }
