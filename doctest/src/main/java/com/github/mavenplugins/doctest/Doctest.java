@@ -8,13 +8,22 @@ import java.lang.annotation.Target;
 
 import com.github.mavenplugins.doctest.formatter.EntityFormatter;
 
+/**
+ * Annotation for doctests.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Target(ElementType.METHOD)
 public @interface Doctest {
     
+    /**
+     * Gets the request configuration
+     */
     Class<? extends RequestData> value();
     
+    /**
+     * Gets the formatter for the response.
+     */
     Class<? extends EntityFormatter> formatter() default EntityFormatter.class;
     
 }

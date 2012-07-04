@@ -20,9 +20,7 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.http.Header;
 import org.apache.http.HttpEntityEnclosingRequest;
-import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
-import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.client.methods.HttpDelete;
@@ -40,7 +38,6 @@ import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.params.HttpParams;
 import org.apache.http.params.HttpParamsNames;
-import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.model.FrameworkMethod;
@@ -58,19 +55,48 @@ import com.github.mavenplugins.doctest.expectations.ExpectHeaders;
 import com.github.mavenplugins.doctest.expectations.ExpectStatus;
 import com.github.mavenplugins.doctest.formatter.EntityFormatter;
 
+/**
+ * A TestRunner only for doctests.
+ */
 public class DoctestRunner extends BlockJUnit4ClassRunner {
     
+    /**
+     * An empty array for copying purpose.
+     */
     private static final String[] EMPTY_STRING_ARRAY = new String[] {};
-    
+    /**
+     * The java backstore variable for the sources of the doctests.
+     */
     public static final String TEST_SOURCE_PATH = "doctest.sources.path";
+    /**
+     * The java backstore variable for the results of the doctests.
+     */
     public static final String RESULT_PATH = "doctest.result.path";
+    /**
+     * Enable the gzip.
+     */
     private static final RequestAcceptEncoding REQUEST_GZIP_INTERCEPTOR = new RequestAcceptEncoding();
+    /**
+     * Enable the gzip.
+     */
     private static final ResponseContentEncoding RESPONSE_GZIP_INTERCEPTOR = new ResponseContentEncoding();
     
+    /**
+     * The java back-store.
+     */
     protected Preferences prefs = Preferences.userNodeForPackage(DoctestRunner.class);
+    /**
+     * the directory for the test results.
+     */
     protected File path = new File(prefs.get(RESULT_PATH, "./target/doctests/"));
+    /**
+     * The json mapper.
+     */
     protected ObjectMapper jsonMapper = new ObjectMapper();
     
+    /**
+     * constructs the runner with the given test class.
+     */
     public DoctestRunner(Class<?> testClass) throws InvocationTargetException, InitializationError {
         super(testClass);
         if (!path.exists()) {
@@ -78,11 +104,17 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         }
     }
     
+    /**
+     * Gets only methods annotated with {@link Doctest}.
+     */
     @Override
     protected List<FrameworkMethod> computeTestMethods() {
         return getTestClass().getAnnotatedMethods(Doctest.class);
     }
     
+    /**
+     * Gets the executor for the doctests.
+     */
     @Override
     protected Statement methodInvoker(final FrameworkMethod method, final Object test) {
         return new Statement() {
@@ -98,17 +130,6 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
                 byte[] responseData;
                 
                 client.addRequestInterceptor(REQUEST_GZIP_INTERCEPTOR);
-                client.addRequestInterceptor(new HttpRequestInterceptor() {
-                    
-                    public void process(HttpRequest request, HttpContext context) throws HttpException, IOException {
-                        try {
-                            saveRequest(method, request);
-                        } catch (Exception exception) {
-                        }
-                    }
-                    
-                });
-                
                 client.addResponseInterceptor(RESPONSE_GZIP_INTERCEPTOR);
                 
                 request = buildRequest(request, requestData);
@@ -133,6 +154,7 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
                 
                 response = client.execute(request);
                 responseData = EntityUtils.toByteArray(response.getEntity());
+                saveRequest(method, request);
                 saveResponse(method, test, response, responseData);
                 
                 assertExpectations(method, response);
@@ -143,6 +165,9 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         };
     }
     
+    /**
+     * Verifies the expect-annotations, if any, of the method.
+     */
     protected void assertExpectations(FrameworkMethod method, HttpResponse response) {
         ExpectStatus status = method.getMethod().getAnnotation(ExpectStatus.class);
         ExpectHeaders headers = method.getMethod().getAnnotation(ExpectHeaders.class);
@@ -156,6 +181,9 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         }
     }
     
+    /**
+     * Verifies if the expected headers were given.
+     */
     protected void assertResponseHeaders(HttpResponse response, ExpectHeaders headers) {
         ExpectHeader[] headerArray = headers.value();
         
@@ -166,6 +194,9 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         }
     }
     
+    /**
+     * Verifies if the expected status code was given.
+     */
     protected void assertResponseStatus(HttpResponse response, ExpectStatus status) {
         assertEquals(status.value(), response.getStatusLine().getStatusCode());
         if (!status.message().equals("")) {
@@ -173,6 +204,9 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         }
     }
     
+    /**
+     * Saves the request data for later reporting.
+     */
     protected void saveRequest(FrameworkMethod method, HttpRequest request) throws Exception {
         File file = new File(path, getRequestResultFileName(method));
         PrintStream stream = null;
@@ -196,14 +230,25 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         }
     }
     
+    /**
+     * Gets the filename for the result file using the specified method.
+     */
     protected String getRequestResultFileName(FrameworkMethod method) {
         return getTestClass().getJavaClass().getName() + "-" + method.getName() + ".request";
     }
     
+    /**
+     * Assigns the request form data to the wrapper.
+     */
     protected void setRequestEntity(HttpRequest request, RequestResultWrapper wrapper) throws IOException {
-        wrapper.setEntity(EntityUtils.toString(((HttpEntityEnclosingRequest) request).getEntity()));
+        if (((HttpEntityEnclosingRequest) request).getEntity() != null) {
+            wrapper.setEntity(EntityUtils.toString(((HttpEntityEnclosingRequest) request).getEntity()));
+        }
     }
     
+    /**
+     * Assigns the request parameter to the wrapper.
+     */
     protected void setRequestParameters(HttpRequest request, RequestResultWrapper wrapper) {
         HttpParams parameters = request.getParams();
         List<String> parameterValues = new ArrayList<String>();
@@ -220,6 +265,9 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         wrapper.setParemeters(parameterValues.toArray(EMPTY_STRING_ARRAY));
     }
     
+    /**
+     * Assigns the request headers to the wrapper.
+     */
     protected void setRequestHeaders(HttpRequest request, RequestResultWrapper wrapper) {
         String[] headerValues = new String[request.getAllHeaders().length];
         int index = 0;
@@ -231,6 +279,9 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         wrapper.setHeader(headerValues);
     }
     
+    /**
+     * Assigns the request-line to the wrapper.
+     */
     protected void setRequestLine(HttpRequest request, RequestResultWrapper wrapper) throws URISyntaxException {
         StringBuilder builder = new StringBuilder();
         
@@ -244,6 +295,9 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         wrapper.setPath(new URI(request.getRequestLine().getUri()).getRawPath());
     }
     
+    /**
+     * Saves the response dta for later reporting.
+     */
     protected void saveResponse(FrameworkMethod method, Object test, HttpResponse response, byte[] responseData) throws Exception {
         File file = new File(path, getResponseResultFileName(method));
         PrintStream stream = null;
@@ -266,10 +320,16 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         }
     }
     
+    /**
+     * Gets the filename for the response result file.
+     */
     protected String getResponseResultFileName(FrameworkMethod method) {
         return getTestClass().getJavaClass().getName() + "-" + method.getName() + ".response";
     }
     
+    /**
+     * Assigns the response body to the wrapper.
+     */
     protected void setResponseEntity(FrameworkMethod method, Object test, HttpResponse response, byte[] responseData, ResponseResultWrapper wrapper,
             Class<? extends EntityFormatter> formmterType) throws InstantiationException, IllegalAccessException, InvocationTargetException,
             NoSuchMethodException, Exception, IOException {
@@ -282,6 +342,9 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         }
     }
     
+    /**
+     * Assigns the response parameters to the wrapper.
+     */
     protected void setResponseParameters(HttpResponse response, ResponseResultWrapper wrapper) {
         HttpParams parameters = response.getParams();
         List<String> parameterValues = new ArrayList<String>();
@@ -298,6 +361,9 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         wrapper.setParemeters(parameterValues.toArray(EMPTY_STRING_ARRAY));
     }
     
+    /**
+     * Assigns the response header to the wrapper.
+     */
     protected void setResponseHeaders(HttpResponse response, ResponseResultWrapper wrapper) {
         String[] headerValues = new String[response.getAllHeaders().length];
         int index = 0;
@@ -309,6 +375,9 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         wrapper.setHeader(headerValues);
     }
     
+    /**
+     * Assigns the response-line to the wrapper.
+     */
     protected void setResponseLine(HttpResponse response, ResponseResultWrapper wrapper) {
         StringBuilder builder = new StringBuilder();
         
@@ -321,6 +390,9 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         wrapper.setStatusLine(builder.toString());
     }
     
+    /**
+     * Instantiates the given type.
+     */
     protected <T> T instance(FrameworkMethod method, Object test, Class<T> type) throws InstantiationException, IllegalAccessException,
             IllegalArgumentException, InvocationTargetException, SecurityException, NoSuchMethodException {
         Constructor<T> constructor;
@@ -348,6 +420,9 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         }
     }
     
+    /**
+     * Checks if the test method suits the needs of the test-runner.
+     */
     @Override
     protected void validateTestMethods(List<Throwable> errors) {
         List<FrameworkMethod> methods = getTestClass().getAnnotatedMethods(Doctest.class);
@@ -371,6 +446,9 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         }
     }
     
+    /**
+     * Builds the request based on the specified data..
+     */
     protected HttpRequestBase buildRequest(HttpRequestBase request, RequestData requestData) throws URISyntaxException {
         if (HttpGet.METHOD_NAME.equalsIgnoreCase(requestData.getMethod())) {
             request = new HttpGet(requestData.getURI());
@@ -392,16 +470,27 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         return request;
     }
     
+    /**
+     * Actually runs the test method.
+     */
     protected void invokeTestMethod(final FrameworkMethod method, final Object test, HttpResponse response, Class<?>[] methodParameters, byte[] responseData)
             throws Throwable, SAXException, IOException, ParserConfigurationException, JsonProcessingException {
         if (methodParameters.length == 1) {
             method.invokeExplosively(test, response);
         } else if (methodParameters.length == 2) {
             if (Document.class.isAssignableFrom(methodParameters[1])) {
-                method.invokeExplosively(test, response, DocumentBuilderFactory.newInstance().newDocumentBuilder()
-                        .parse(new ByteArrayInputStream(responseData)));
+                if (responseData == null || responseData.length == 0) {
+                    method.invokeExplosively(test, response, null);
+                } else {
+                    method.invokeExplosively(test, response,
+                            DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(new ByteArrayInputStream(responseData)));
+                }
             } else if (JsonNode.class.isAssignableFrom(methodParameters[1]) && response.getEntity() != null) {
-                method.invokeExplosively(test, response, jsonMapper.readTree(responseData));
+                if (responseData == null || responseData.length == 0) {
+                    method.invokeExplosively(test, response, null);
+                } else {
+                    method.invokeExplosively(test, response, jsonMapper.readTree(responseData));
+                }
             }
         }
     }

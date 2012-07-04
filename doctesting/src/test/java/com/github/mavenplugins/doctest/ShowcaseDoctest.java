@@ -22,19 +22,24 @@ import javax.jws.WebService;
 import javax.xml.ws.Endpoint;
 
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpPut;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.w3c.dom.Document;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.github.mavenplugins.doctest.asserts.JsonAssertUtils;
+import com.github.mavenplugins.doctest.expectations.ExpectHeader;
+import com.github.mavenplugins.doctest.expectations.ExpectHeaders;
+import com.github.mavenplugins.doctest.expectations.ExpectStatus;
 import com.github.mavenplugins.doctest.formatter.JsonPrettyPrinter;
 import com.github.mavenplugins.doctest.formatter.XmlPrettyPrinter;
 
 @RunWith(DoctestRunner.class)
-public class MyDoctest {
+public class ShowcaseDoctest {
     
-    class Resource1 extends AbstractRequestData {
+    class WSDLDescriptor extends AbstractRequestData {
         
         public URI getURI() throws URISyntaxException {
             return new URI("http://localhost:8080/someService?wsdl");
@@ -46,6 +51,23 @@ public class MyDoctest {
         
         public URI getURI() throws URISyntaxException {
             return new URI("http://localhost:12345/user/jack");
+        }
+        
+    }
+    
+    class Johnny extends AbstractRequestData {
+        
+        public URI getURI() throws URISyntaxException {
+            return new URI("http://localhost:12345/user/johnny");
+        }
+        
+    }
+    
+    class BadJohnny extends Johnny {
+        
+        @Override
+        public String getMethod() {
+            return HttpPut.METHOD_NAME;
         }
         
     }
@@ -81,19 +103,34 @@ public class MyDoctest {
      */
     
     /**
-     * My Doctest doc.
-     * new line
-     * 
-     * 
-     * @param custom
-     *            annotation
+     * This request should get us a valid WSDL descriptor.
      */
-    @Doctest(value = Resource1.class, formatter = XmlPrettyPrinter.class)
+    @Doctest(value = WSDLDescriptor.class, formatter = XmlPrettyPrinter.class)
     public void myXmlTest(HttpResponse response, Document document) throws Exception {
+        
     }
     
     @Doctest(value = Jack.class, formatter = JsonPrettyPrinter.class)
     public void myJsonTest(HttpResponse response, JsonNode document) throws Exception {
+    }
+    
+    /**
+     * Johnny knows Jack and his friend. But he is not directly a friend of Jack's friend ...
+     */
+    @Doctest(value = Johnny.class, formatter = JsonPrettyPrinter.class)
+    @ExpectStatus(200)
+    @ExpectHeaders({ @ExpectHeader(name = "Content-Type", content = "application/json.*") })
+    public void myOtherJsonTest(HttpResponse response, JsonNode document) throws Exception {
+        JsonAssertUtils.assertExists("Johnny is Jacks friend, and Jack is Freddy's friend", document, "//*");
+        //assertEquals("Johnny is not directly Freddy's friend", 0, JsonAssertUtils.count(document, "//*"));
+    }
+    
+    /**
+     * This Test should fail, because we use the wrong http method
+     */
+    @Doctest(value = BadJohnny.class, formatter = JsonPrettyPrinter.class)
+    @ExpectStatus(405)
+    public void badHttpMethod(HttpResponse response, JsonNode document) throws Exception {
     }
     
 }

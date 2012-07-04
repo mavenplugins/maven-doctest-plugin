@@ -1,5 +1,8 @@
 package com.github.mavenplugins.doctest;
 
+/**
+ * A wrapper for the request, which stores the states for the later report plugin.
+ */
 public class RequestResultWrapper {
     
     protected String path;

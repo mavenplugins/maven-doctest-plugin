@@ -58,8 +58,10 @@ public class ReportMojo extends AbstractMavenReport {
                     | Pattern.MULTILINE);
     private static final SinkEventAttributeSet TABLE_CELL_STYLE_ATTRIBUTES = new SinkEventAttributeSet(new String[] { "style", "width:150px;" });
     private static final String JAVASCRIPT_CODE = "<script type=\"text/javascript\">function toggleVisibility(t){var e=document.getElementById(t);if(e.style.display=='block'){e.style.display='none';}else{e.style.display='block';}}</script>";
-    private static final String CSS_CODE = "<style type=\"text/css\">.hiddenAtInitialization{display: none;}</style>";
     
+    /**
+     * A container which encapsulates endpoints and contains the corresponding doctests.
+     */
     public class DoctestsContainer {
         
         protected Map<String, DoctestData> doctests = new TreeMap<String, DoctestData>();
@@ -83,6 +85,9 @@ public class ReportMojo extends AbstractMavenReport {
         
     }
     
+    /**
+     * A container for the doctest data (request, response, javadoc).
+     */
     public class DoctestData {
         
         protected RequestResultWrapper request;
@@ -142,9 +147,33 @@ public class ReportMojo extends AbstractMavenReport {
      */
     private MavenProject project;
     
+    /**
+     * The number of characters that can be seen without hitting the "more details" button.
+     * 
+     * @parameter expression="${project.reporting.doctests.maxPreview}" default-value="128"
+     */
+    private int maxPreview = 128;
+    
+    /**
+     * the java back-store which has the information where the result are situated.
+     */
     protected Preferences prefs = Preferences.userNodeForPackage(DoctestRunner.class);
+    /**
+     * the report is sorted by endpoint, this map holds them.
+     */
     protected Map<String, DoctestsContainer> endpoints = new TreeMap<String, DoctestsContainer>();
+    /**
+     * the json mapper used to read the doctest results.
+     */
     protected ObjectMapper mapper = new ObjectMapper();
+    
+    public int getMaxPreview() {
+        return maxPreview;
+    }
+    
+    public void setMaxPreview(int maxPreview) {
+        this.maxPreview = maxPreview;
+    }
     
     @Override
     protected String getOutputDirectory() {
@@ -185,6 +214,9 @@ public class ReportMojo extends AbstractMavenReport {
         this.project = project;
     }
     
+    /**
+     * Parses and renders the doctest results using {@link #parseDoctestResults(File, String)} and {@link #renderDoctestResults(Locale)}.
+     */
     @Override
     protected void executeReport(Locale locale) throws MavenReportException {
         File dir;
@@ -214,6 +246,9 @@ public class ReportMojo extends AbstractMavenReport {
         }
     }
     
+    /**
+     * renders the basic scaffolding via the {@link Sink}. the actual report rendering is done via {@link #renderReport(Sink, Locale)}.
+     */
     protected void renderDoctestResults(Locale locale) throws RendererException {
         Sink sink = getSink();
         
@@ -225,13 +260,15 @@ public class ReportMojo extends AbstractMavenReport {
         
         sink.body();
         sink.rawText(JAVASCRIPT_CODE);
-        sink.rawText(CSS_CODE);
         renderReport(sink, locale);
         sink.body_();
         
         sink.flush();
     }
     
+    /**
+     * Iterates through all enpoints and renders all doctest method for each endpoint.
+     */
     protected void renderReport(Sink sink, Locale locale) {
         AtomicInteger counter = new AtomicInteger();
         String requestLabel = escapeToHtml(getBundle(locale).getString("request.header"));
@@ -280,7 +317,7 @@ public class ReportMojo extends AbstractMavenReport {
                 sink.bold_();
                 sink.tableCell_();
                 sink.tableCell();
-                sink.rawText(renderRequestCell(doctest.getValue().getRequest(), counter, detailLabel));
+                renderRequestCell(sink, doctest.getValue().getRequest(), counter, detailLabel);
                 sink.tableCell_();
                 sink.tableRow_();
                 
@@ -291,7 +328,7 @@ public class ReportMojo extends AbstractMavenReport {
                 sink.bold_();
                 sink.tableCell_();
                 sink.tableCell();
-                sink.rawText(renderResponseCell(doctest.getValue().getResponse(), counter, detailLabel));
+                renderResponseCell(sink, doctest.getValue().getResponse(), counter, detailLabel);
                 sink.tableCell_();
                 sink.tableRow_();
                 
@@ -303,82 +340,145 @@ public class ReportMojo extends AbstractMavenReport {
         sink.section1_();
     }
     
-    protected String renderRequestCell(RequestResultWrapper wrapper, AtomicInteger counter, String details) {
+    /**
+     * Renders the request cell in the table
+     */
+    protected void renderRequestCell(Sink sink, RequestResultWrapper wrapper, AtomicInteger counter, String details) {
         StringBuilder builder = new StringBuilder();
+        String preview;
         int id = counter.incrementAndGet();
         
         builder.append(wrapper.getRequestLine());
         builder.append("<br/>");
         builder.append("<a href=\"javascript:\" onclick=\"toggleVisibility('request-detail-");
         builder.append(id);
-        builder.append("');\">");
+        builder.append("');toggleVisibility('request-detail-");
+        builder.append(id);
+        builder.append("-preview');\">");
         builder.append(details);
-        builder.append("</a>");
+        builder.append("</a><br/><div id=\"request-detail-");
+        builder.append(id);
+        builder.append("-preview\" style=\"display: block;\">");
+        
+        sink.rawText(builder.toString());
+        builder.delete(0, builder.length());
+        
+        preview = wrapper.getEntity();
+        if (!StringUtils.isEmpty(wrapper.getEntity()) && wrapper.getEntity().length() <= maxPreview) {
+            preview = wrapper.getEntity();
+        } else if (!StringUtils.isEmpty(wrapper.getEntity())) {
+            preview = wrapper.getEntity().substring(0, maxPreview) + "&hellip;";
+        }
+        
+        if (!StringUtils.isEmpty(wrapper.getEntity())) {
+            sink.verbatim(SinkEventAttributeSet.BOXED);
+            sink.rawText(preview);
+            sink.verbatim_();
+        }
+        
+        builder.append("</div>");
         builder.append("<div id=\"request-detail-");
         builder.append(id);
-        builder.append("\" class=\"hiddenAtInitialization\">");
+        builder.append("\" style=\"display: none;\">");
+        
+        sink.rawText(builder.toString());
+        builder.delete(0, builder.length());
+        
         if (wrapper.getHeader() != null && wrapper.getHeader().length > 0) {
-            builder.append("<br/>");
+            sink.verbatim(SinkEventAttributeSet.BOXED);
             for (String header : wrapper.getHeader()) {
-                builder.append(header);
-                builder.append("<br/>");
+                sink.rawText(header);
+                sink.rawText("<br/>");
             }
+            sink.verbatim_();
         }
         if (wrapper.getParemeters() != null && wrapper.getParemeters().length > 0) {
-            builder.append("<br/>");
+            sink.verbatim(SinkEventAttributeSet.BOXED);
             for (String parameter : wrapper.getParemeters()) {
-                builder.append(parameter);
-                builder.append("<br/>");
+                sink.rawText(parameter);
+                sink.rawText("<br/>");
             }
-            
+            sink.verbatim_();
         }
         if (!StringUtils.isEmpty(wrapper.getEntity())) {
-            builder.append("<br/>");
-            builder.append(wrapper.getEntity());
+            sink.verbatim(SinkEventAttributeSet.BOXED);
+            sink.rawText(wrapper.getEntity());
+            sink.verbatim_();
         }
-        builder.append("</div>");
-        
-        return builder.toString();
+        sink.rawText("</div>");
     }
     
-    protected String renderResponseCell(ResponseResultWrapper wrapper, AtomicInteger counter, String details) {
+    /**
+     * Renders the response cell in the table.
+     */
+    protected void renderResponseCell(Sink sink, ResponseResultWrapper wrapper, AtomicInteger counter, String details) {
         StringBuilder builder = new StringBuilder();
+        String preview;
         int id = counter.incrementAndGet();
         
         builder.append(wrapper.getStatusLine());
         builder.append("<br/>");
         builder.append("<a href=\"javascript:\" onclick=\"toggleVisibility('response-detail-");
         builder.append(id);
-        builder.append("');\">");
+        builder.append("');toggleVisibility('response-detail-");
+        builder.append(id);
+        builder.append("-preview');\">");
         builder.append(details);
-        builder.append("</a>");
+        builder.append("</a><br/><div id=\"response-detail-");
+        builder.append(id);
+        builder.append("-preview\" style=\"display: block;\">");
+        
+        sink.rawText(builder.toString());
+        builder.delete(0, builder.length());
+        
+        preview = wrapper.getEntity();
+        if (!StringUtils.isEmpty(wrapper.getEntity()) && wrapper.getEntity().length() <= maxPreview) {
+            preview = wrapper.getEntity();
+        } else if (!StringUtils.isEmpty(wrapper.getEntity())) {
+            preview = wrapper.getEntity().substring(0, maxPreview) + "&hellip;";
+        }
+        
+        if (!StringUtils.isEmpty(wrapper.getEntity())) {
+            sink.verbatim(SinkEventAttributeSet.BOXED);
+            sink.rawText(preview);
+            sink.verbatim_();
+        }
+        
+        builder.append("</div>");
         builder.append("<div id=\"response-detail-");
         builder.append(id);
-        builder.append("\" class=\"hiddenAtInitialization\">");
+        builder.append("\" style=\"display: none;\">");
+        
+        sink.rawText(builder.toString());
+        builder.delete(0, builder.length());
+        
         if (wrapper.getHeader() != null && wrapper.getHeader().length > 0) {
-            builder.append("<br/>");
+            sink.verbatim(SinkEventAttributeSet.BOXED);
             for (String header : wrapper.getHeader()) {
-                builder.append(header);
-                builder.append("<br/>");
+                sink.rawText(header);
+                sink.rawText("<br/>");
             }
+            sink.verbatim_();
         }
         if (wrapper.getParemeters() != null && wrapper.getParemeters().length > 0) {
-            builder.append("<br/>");
+            sink.verbatim(SinkEventAttributeSet.BOXED);
             for (String parameter : wrapper.getParemeters()) {
-                builder.append(parameter);
-                builder.append("<br/>");
+                sink.rawText(parameter);
+                sink.rawText("<br/>");
             }
-            
+            sink.verbatim_();
         }
         if (!StringUtils.isEmpty(wrapper.getEntity())) {
-            builder.append("<br/>");
-            builder.append(wrapper.getEntity());
+            sink.verbatim(SinkEventAttributeSet.BOXED);
+            sink.rawText(wrapper.getEntity());
+            sink.verbatim_();
         }
-        builder.append("</div>");
-        
-        return builder.toString();
+        sink.rawText("</div>");
     }
     
+    /**
+     * Gets the doctest results and transforms them into {@link DoctestsContainer} objects.
+     */
     protected void parseDoctestResults(File doctestResultDirectory, String doctestResultDirectoryName) {
         String tmp;
         String className;
@@ -434,6 +534,9 @@ public class ReportMojo extends AbstractMavenReport {
         }
     }
     
+    /**
+     * Gets the javadoc comment situated over a doctest method.
+     */
     protected String getJavaDoc(String source, String method) {
         Pattern methodPattern = Pattern.compile(
                 "public\\s+void\\s+" + method + "\\s*\\((HttpResponse|" + HttpResponse.class.getName().replaceAll("\\.", "\\\\.") + ")",
@@ -466,6 +569,9 @@ public class ReportMojo extends AbstractMavenReport {
         return "";
     }
     
+    /**
+     * Escapes an array of strings.
+     */
     protected String[] escapeToHtml(String[] texts) {
         for (int i = 0; i < texts.length; i++) {
             texts[i] = escapeToHtml(texts[i]);
@@ -473,6 +579,9 @@ public class ReportMojo extends AbstractMavenReport {
         return texts;
     }
     
+    /**
+     * Escapes a single string.
+     */
     protected String escapeToHtml(String text) {
         return StringUtils.replace(StringUtils.replace(HtmlTools.escapeHTML(text, false), "&amp;#", "&#"), LINE_SEPARATOR, "<br/>");
     }

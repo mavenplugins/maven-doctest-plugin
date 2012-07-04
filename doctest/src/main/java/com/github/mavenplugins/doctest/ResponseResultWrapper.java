@@ -1,5 +1,8 @@
 package com.github.mavenplugins.doctest;
 
+/**
+ * A wrapper for the response, which stores the states for the later report plugin.
+ */
 public class ResponseResultWrapper {
     
     protected String statusLine;
@@ -12,7 +15,7 @@ public class ResponseResultWrapper {
     }
     
     public void setStatusLine(String responseLine) {
-        this.statusLine = responseLine;
+        statusLine = responseLine;
     }
     
     public String[] getHeader() {

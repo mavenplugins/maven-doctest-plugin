@@ -43,7 +43,7 @@ public class PrepareMojo extends AbstractMojo {
     /**
      * The directory where the doctest result are written to.
      * 
-     * @parameter expression="${project.reporting.doctestOutputDirectory}" default-value="${project.build.outputDirectory}/../doctests/"
+     * @parameter expression="${project.reporting.doctests.outputDirectory}" default-value="${project.build.outputDirectory}/../doctests/"
      */
     private String doctestResultPath;
     
@@ -69,6 +69,9 @@ public class PrepareMojo extends AbstractMojo {
         this.project = project;
     }
     
+    /**
+     * Puts the path information to the java back-store.
+     */
     public void execute() throws MojoExecutionException, MojoFailureException {
         try {
             prefs.sync();
