@@ -222,9 +222,9 @@ Examples:
 
 ```json
 {
-	node1: {
-		name: "node1"
-		node1-1: {
+	"node1": {
+		"name": "node1"
+		"node1-1": {
 			name: "node1.1"
 		}
 	}
@@ -237,4 +237,4 @@ JsonAssertUtils.assertExists("should be true, too", node, "//node1-1[@name='node
 JsonAssertUtils.assertExists("should fail", node, "//*[@name='node1.2']");
 ```
 
-If you already familiar with XPath you see the powerful, easy to use response verification ...
+If you are already familiar with XPath you see the powerful, easy to use response verification ...
