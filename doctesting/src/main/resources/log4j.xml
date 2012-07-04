@@ -10,7 +10,7 @@
 	</appender>
     
     <logger name="org.springframework">
-        <level value="all"/>
+        <level value="error"/>
     </logger>
 	
 	<root>

@@ -27,6 +27,8 @@ import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.w3c.dom.Document;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.github.mavenplugins.doctest.formatter.JsonPrettyPrinter;
 import com.github.mavenplugins.doctest.formatter.XmlPrettyPrinter;
 
 @RunWith(DoctestRunner.class)
@@ -36,6 +38,14 @@ public class MyDoctest {
         
         public URI getURI() throws URISyntaxException {
             return new URI("http://localhost:8080/someService?wsdl");
+        }
+        
+    }
+    
+    class Jack extends AbstractRequestData {
+        
+        public URI getURI() throws URISyntaxException {
+            return new URI("http://localhost:12345/user/jack");
         }
         
     }
@@ -79,19 +89,11 @@ public class MyDoctest {
      *            annotation
      */
     @Doctest(value = Resource1.class, formatter = XmlPrettyPrinter.class)
-    public void resource1(HttpResponse response, Document document) throws Exception {
+    public void myXmlTest(HttpResponse response, Document document) throws Exception {
     }
     
-    @Doctest(value = Resource1.class, formatter = XmlPrettyPrinter.class)
-    public void resource2(HttpResponse response, Document document) throws Exception {
-    }
-    
-    @Doctest(value = Resource1.class, formatter = XmlPrettyPrinter.class)
-    public void resource3(HttpResponse response, Document document) throws Exception {
-    }
-    
-    @Doctest(value = Resource1.class, formatter = XmlPrettyPrinter.class)
-    public void resource4(HttpResponse response, Document document) throws Exception {
+    @Doctest(value = Jack.class, formatter = JsonPrettyPrinter.class)
+    public void myJsonTest(HttpResponse response, JsonNode document) throws Exception {
     }
     
 }

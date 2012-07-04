@@ -61,14 +61,19 @@
 				<configuration>
 					<useTestClasspath>true</useTestClasspath>
 					<jettyConfig>${project.build.directory}/test-classes/jetty.xml</jettyConfig>
+                    <stopPort>12346</stopPort>
+                    <stopKey>c</stopKey>
 				</configuration>
                 <executions>
                     <execution>
                         <id>start-integration-test-server</id>
                         <goals>
-                            <goal>run</goal>
+                            <goal>run-exploded</goal>
                         </goals>
                         <phase>pre-integration-test</phase>
+                        <configuration>
+                            <daemon>true</daemon>
+                        </configuration>
                     </execution>
                     <execution>
                         <id>stop-integration-test-server</id>
@@ -76,6 +81,9 @@
                             <goal>stop</goal>
                         </goals>
                         <phase>post-integration-test</phase>
+                        <configuration>
+                            <daemon>true</daemon>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
