@@ -1,3 +1,76 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <pmd-cpd>
+<duplication lines="35" tokens="203">
+<file line="380" path="D:\git\maven-doctest-plugin\plugin\src\main\java\com\github\mavenplugins\doctest\ReportMojo.java"/>
+<file line="448" path="D:\git\maven-doctest-plugin\plugin\src\main\java\com\github\mavenplugins\doctest\ReportMojo.java"/>
+<codefragment>
+<![CDATA[
+        builder.append("<div id=\"request-detail-");
+        builder.append(id);
+        builder.append("\" style=\"display: none;\">");
+        
+        sink.rawText(builder.toString());
+        builder.delete(0, builder.length());
+        
+        if (wrapper.getHeader() != null && wrapper.getHeader().length > 0) {
+            sink.verbatim(SinkEventAttributeSet.BOXED);
+            for (String header : wrapper.getHeader()) {
+                sink.rawText(header);
+                sink.rawText("<br/>");
+            }
+            sink.verbatim_();
+        }
+        if (wrapper.getParemeters() != null && wrapper.getParemeters().length > 0) {
+            sink.verbatim(SinkEventAttributeSet.BOXED);
+            for (String parameter : wrapper.getParemeters()) {
+                sink.rawText(parameter);
+                sink.rawText("<br/>");
+            }
+            sink.verbatim_();
+        }
+        if (!StringUtils.isEmpty(wrapper.getEntity())) {
+            sink.verbatim(SinkEventAttributeSet.BOXED);
+            sink.rawText(wrapper.getEntity());
+            sink.verbatim_();
+        }
+        sink.rawText("</div>");
+    }
+    
+    /**
+     * Renders the response cell in the table.
+     */
+    protected void renderResponseCell(Sink sink, ResponseResultWrapper wrapper, AtomicInteger counter, String details) {
+]]>
+</codefragment>
+</duplication>
+<duplication lines="22" tokens="155">
+<file line="359" path="D:\git\maven-doctest-plugin\plugin\src\main\java\com\github\mavenplugins\doctest\ReportMojo.java"/>
+<file line="427" path="D:\git\maven-doctest-plugin\plugin\src\main\java\com\github\mavenplugins\doctest\ReportMojo.java"/>
+<codefragment>
+<![CDATA[
+        builder.append("</a><br/><div id=\"request-detail-");
+        builder.append(id);
+        builder.append("-preview\" style=\"display: block;\">");
+        
+        sink.rawText(builder.toString());
+        builder.delete(0, builder.length());
+        
+        preview = wrapper.getEntity();
+        if (!StringUtils.isEmpty(wrapper.getEntity()) && wrapper.getEntity().length() <= maxPreview) {
+            preview = wrapper.getEntity();
+        } else if (!StringUtils.isEmpty(wrapper.getEntity())) {
+            preview = wrapper.getEntity().substring(0, maxPreview) + "&hellip;";
+        }
+        
+        if (!StringUtils.isEmpty(wrapper.getEntity())) {
+            sink.verbatim(SinkEventAttributeSet.BOXED);
+            sink.rawText(preview);
+            sink.verbatim_();
+        }
+        
+        builder.append("</div>");
+        builder.append("<div id=\"request-detail-");
+]]>
+</codefragment>
+</duplication>
 </pmd-cpd>
