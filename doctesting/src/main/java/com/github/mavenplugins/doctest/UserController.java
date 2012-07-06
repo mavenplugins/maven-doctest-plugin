@@ -1,6 +1,7 @@
 package com.github.mavenplugins.doctest;
 
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
@@ -50,6 +51,11 @@ public class UserController {
         user.getFriends().add(new Friend(jack()));
         
         return user;
+    }
+    
+    @RequestMapping(value = "/setJohnny", method = RequestMethod.PUT)
+    public String setUser(@RequestBody User user) {
+        return "{}";
     }
     
 }

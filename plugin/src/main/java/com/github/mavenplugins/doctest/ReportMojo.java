@@ -229,7 +229,7 @@ public class ReportMojo extends AbstractMavenReport {
             results = new File(doctestResults);
             prefs.removeNode();
         } catch (BackingStoreException exception) {
-            exception.printStackTrace();
+            getLog().error("error while getting settings", exception);
         }
         
         if (!(dir = new File(project.getReporting().getOutputDirectory() + File.separator + "doctests")).exists()) {

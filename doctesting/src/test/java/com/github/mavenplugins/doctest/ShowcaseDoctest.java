@@ -21,8 +21,11 @@ import java.net.URISyntaxException;
 import javax.jws.WebService;
 import javax.xml.ws.Endpoint;
 
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPut;
+import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.entity.ContentType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.runner.RunWith;
@@ -68,6 +71,26 @@ public class ShowcaseDoctest {
         @Override
         public String getMethod() {
             return HttpPut.METHOD_NAME;
+        }
+        
+    }
+    
+    class PutJohnny extends AbstractRequestData {
+        
+        public URI getURI() throws URISyntaxException {
+            return new URI("http://localhost:12345/user/setJohnny");
+        }
+        
+        @Override
+        public String getMethod() {
+            return HttpPut.METHOD_NAME;
+        }
+        
+        @Override
+        public HttpEntity getHttpEntity() {
+            return new ByteArrayEntity(
+                    "{\"firstName\":\"Jack\",\"lastName\" : \"Daniels\",\"birthday\" : 1341437232926,\"address\" : {  \"street\" : \"Main Ave.\",  \"number\" : \"7A\",  \"city\" : \"New York\",  \"zipcode\" : \"7A1234\",  \"country\" : \"USA\"},\"friends\" : [ {  \"firstName\" : \"Freddy\",  \"lastName\" : \"Johnson\",  \"birthday\" : 1341437232926,  \"address\" : null,  \"friends\" : [ ],  \"friendshipSince\" : 1341437232926} ]}"
+                            .getBytes(), ContentType.APPLICATION_JSON);
         }
         
     }
@@ -131,6 +154,10 @@ public class ShowcaseDoctest {
     @Doctest(value = BadJohnny.class, formatter = JsonPrettyPrinter.class)
     @ExpectStatus(405)
     public void badHttpMethod(HttpResponse response, JsonNode document) throws Exception {
+    }
+    
+    @Doctest(value = PutJohnny.class, formatter = JsonPrettyPrinter.class)
+    public void putMethod(HttpResponse response) throws Exception {
     }
     
 }

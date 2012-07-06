@@ -19,11 +19,13 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.http.Header;
-import org.apache.http.HttpEntityEnclosingRequest;
+import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
+import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpOptions;
@@ -38,6 +40,7 @@ import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.params.HttpParams;
 import org.apache.http.params.HttpParamsNames;
+import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.model.FrameworkMethod;
@@ -128,11 +131,22 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
                 BasicCredentialsProvider credentialsProvider;
                 Class<?>[] methodParameters = method.getMethod().getParameterTypes();
                 byte[] responseData;
+                byte[] requestEntityData = null;
+                final RequestResultWrapper wrapper = new RequestResultWrapper();
                 
                 client.addRequestInterceptor(REQUEST_GZIP_INTERCEPTOR);
+                client.addRequestInterceptor(new HttpRequestInterceptor() {
+                    
+                    public void process(HttpRequest request, HttpContext context) throws HttpException, IOException {
+                        setRequestHeaders(request, wrapper);
+                        setRequestParameters(request, wrapper);
+                    }
+                    
+                });
                 client.addResponseInterceptor(RESPONSE_GZIP_INTERCEPTOR);
                 
                 request = buildRequest(request, requestData);
+                setRequestLine(request, wrapper);
                 
                 if (requestData.getHeaders() != null) {
                     request.setHeaders(requestData.getHeaders());
@@ -142,8 +156,9 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
                     request.setParams(requestData.getParameters());
                 }
                 
-                if (requestData.getHttpEntity() != null && request instanceof HttpEntityEnclosingRequest) {
-                    ((HttpEntityEnclosingRequest) request).setEntity(requestData.getHttpEntity());
+                if (requestData.getHttpEntity() != null && request instanceof HttpEntityEnclosingRequestBase) {
+                    requestEntityData = EntityUtils.toByteArray(requestData.getHttpEntity());
+                    ((HttpEntityEnclosingRequestBase) request).setEntity(requestData.getHttpEntity());
                 }
                 
                 if (requestData.getCredentials() != null) {
@@ -154,7 +169,7 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
                 
                 response = client.execute(request);
                 responseData = EntityUtils.toByteArray(response.getEntity());
-                saveRequest(method, request);
+                saveRequest(method, test, request, requestEntityData, wrapper);
                 saveResponse(method, test, response, responseData);
                 
                 assertExpectations(method, response);
@@ -207,22 +222,16 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
     /**
      * Saves the request data for later reporting.
      */
-    protected void saveRequest(FrameworkMethod method, HttpRequest request) throws Exception {
+    protected void saveRequest(FrameworkMethod method, Object test, HttpRequest request, byte[] requestData, RequestResultWrapper wrapper) throws Exception {
         File file = new File(path, getRequestResultFileName(method));
         PrintStream stream = null;
-        RequestResultWrapper wrapper;
+        Doctest doctest = method.getMethod().getAnnotation(Doctest.class);
         
         try {
             stream = new PrintStream(file);
-            
-            wrapper = new RequestResultWrapper();
-            setRequestLine(request, wrapper);
-            setRequestHeaders(request, wrapper);
-            setRequestParameters(request, wrapper);
-            if (request instanceof HttpEntityEnclosingRequest) {
-                setRequestEntity(request, wrapper);
+            if (request instanceof HttpEntityEnclosingRequestBase) {
+                setRequestEntity(method, test, (HttpEntityEnclosingRequestBase) request, requestData, wrapper, doctest.formatter());
             }
-            
             jsonMapper.writeValue(stream, wrapper);
         } finally {
             stream.flush();
@@ -240,9 +249,15 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
     /**
      * Assigns the request form data to the wrapper.
      */
-    protected void setRequestEntity(HttpRequest request, RequestResultWrapper wrapper) throws IOException {
-        if (((HttpEntityEnclosingRequest) request).getEntity() != null) {
-            wrapper.setEntity(EntityUtils.toString(((HttpEntityEnclosingRequest) request).getEntity()));
+    protected void setRequestEntity(FrameworkMethod method, Object test, HttpEntityEnclosingRequestBase request, byte[] requestData,
+            RequestResultWrapper wrapper, Class<? extends EntityFormatter> formatterType) throws InstantiationException, IllegalAccessException,
+            InvocationTargetException, NoSuchMethodException, Exception, IOException {
+        EntityFormatter formatter;
+        
+        if ((formatter = instance(method, test, formatterType)) != null) {
+            wrapper.setEntity(formatter.format(request.getEntity(), requestData));
+        } else {
+            wrapper.setEntity(new String(requestData));
         }
     }
     
@@ -331,11 +346,11 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
      * Assigns the response body to the wrapper.
      */
     protected void setResponseEntity(FrameworkMethod method, Object test, HttpResponse response, byte[] responseData, ResponseResultWrapper wrapper,
-            Class<? extends EntityFormatter> formmterType) throws InstantiationException, IllegalAccessException, InvocationTargetException,
+            Class<? extends EntityFormatter> formatterType) throws InstantiationException, IllegalAccessException, InvocationTargetException,
             NoSuchMethodException, Exception, IOException {
         EntityFormatter formatter;
         
-        if ((formatter = instance(method, test, formmterType)) != null) {
+        if ((formatter = instance(method, test, formatterType)) != null) {
             wrapper.setEntity(formatter.format(response.getEntity(), responseData));
         } else {
             wrapper.setEntity(new String(responseData));
