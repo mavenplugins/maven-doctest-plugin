@@ -223,7 +223,7 @@ Examples:
 ```json
 {
 	"node1": {
-		"name": "node1"
+		"name": "node1",
 		"node1-1": {
 			name: "node1.1"
 		}

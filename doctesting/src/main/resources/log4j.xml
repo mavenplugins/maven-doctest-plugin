@@ -12,6 +12,9 @@
     <logger name="org.springframework">
         <level value="error"/>
     </logger>
+    <logger name="org.apache">
+        <level value="error"/>
+    </logger>
 	
 	<root>
 		<priority value="info"/>
