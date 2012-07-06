@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<pmd version="4.3" timestamp="2012-07-04T23:24:36.436">
+<pmd version="4.3" timestamp="2012-07-06T21:46:54.443">
 <file name="D:\git\maven-doctest-plugin\doctest\src\main\java\com\github\mavenplugins\doctest\DoctestRunner.java">
-<violation beginline="261" endline="262" begincolumn="15" endcolumn="13" rule="EmptyCatchBlock" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="DoctestRunner" method="setRequestParameters" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#EmptyCatchBlock" priority="3">
+<violation beginline="276" endline="277" begincolumn="15" endcolumn="13" rule="EmptyCatchBlock" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="DoctestRunner" method="setRequestParameters" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#EmptyCatchBlock" priority="3">
 Avoid empty catch blocks
 </violation>
-<violation beginline="357" endline="358" begincolumn="15" endcolumn="13" rule="EmptyCatchBlock" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="DoctestRunner" method="setResponseParameters" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#EmptyCatchBlock" priority="3">
+<violation beginline="372" endline="373" begincolumn="15" endcolumn="13" rule="EmptyCatchBlock" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="DoctestRunner" method="setResponseParameters" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#EmptyCatchBlock" priority="3">
 Avoid empty catch blocks
 </violation>
 </file>
