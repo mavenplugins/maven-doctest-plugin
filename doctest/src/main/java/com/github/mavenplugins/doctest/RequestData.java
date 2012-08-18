@@ -6,6 +6,7 @@ import java.net.URISyntaxException;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.auth.Credentials;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.params.HttpParams;
 
 /**
@@ -42,5 +43,10 @@ public interface RequestData {
      * Gets the authentication credentials.
      */
     Credentials getCredentials();
+    
+    /**
+     * Configures the client as needed.
+     */
+    void configureClient(DefaultHttpClient client);
     
 }
