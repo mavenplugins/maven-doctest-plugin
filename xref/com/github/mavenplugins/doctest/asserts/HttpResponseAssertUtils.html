@@ -30,7 +30,7 @@
 <a class="jxr_linenumber" name="20" href="#20">20</a>  <em class="jxr_javadoccomment">     * @param header the string chuck</em>
 <a class="jxr_linenumber" name="21" href="#21">21</a>  <em class="jxr_javadoccomment">     */</em>
 <a class="jxr_linenumber" name="22" href="#22">22</a>      <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">void</strong> assertHeaderExists(HttpResponse response, String header) {
-<a class="jxr_linenumber" name="23" href="#23">23</a>          assertHeaderExists(<strong class="jxr_keyword">null</strong>, response, header);
+<a class="jxr_linenumber" name="23" href="#23">23</a>          assertHeaderExists(<span class="jxr_string">"expected header '"</span> + header + '\'', response, header);
 <a class="jxr_linenumber" name="24" href="#24">24</a>      }
 <a class="jxr_linenumber" name="25" href="#25">25</a>      
 <a class="jxr_linenumber" name="26" href="#26">26</a>      <em class="jxr_javadoccomment">/**</em>
@@ -52,7 +52,7 @@
 <a class="jxr_linenumber" name="42" href="#42">42</a>  <em class="jxr_javadoccomment">     * @param value the value the header should contain</em>
 <a class="jxr_linenumber" name="43" href="#43">43</a>  <em class="jxr_javadoccomment">     */</em>
 <a class="jxr_linenumber" name="44" href="#44">44</a>      <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">void</strong> assertHeaderContains(HttpResponse response, String header, String value) {
-<a class="jxr_linenumber" name="45" href="#45">45</a>          assertHeaderContains(<strong class="jxr_keyword">null</strong>, response, header, value, 0);
+<a class="jxr_linenumber" name="45" href="#45">45</a>          assertHeaderContains(<span class="jxr_string">"expected header '"</span> + header + <span class="jxr_string">"' with value '"</span> + value + '\'', response, header, value, 0);
 <a class="jxr_linenumber" name="46" href="#46">46</a>      }
 <a class="jxr_linenumber" name="47" href="#47">47</a>      
 <a class="jxr_linenumber" name="48" href="#48">48</a>      <em class="jxr_javadoccomment">/**</em>
@@ -76,7 +76,7 @@
 <a class="jxr_linenumber" name="66" href="#66">66</a>  <em class="jxr_javadoccomment">     * @param index the index of the header</em>
 <a class="jxr_linenumber" name="67" href="#67">67</a>  <em class="jxr_javadoccomment">     */</em>
 <a class="jxr_linenumber" name="68" href="#68">68</a>      <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">void</strong> assertHeaderContains(HttpResponse response, String header, String value, <strong class="jxr_keyword">int</strong> index) {
-<a class="jxr_linenumber" name="69" href="#69">69</a>          assertHeaderContains(<strong class="jxr_keyword">null</strong>, response, header, value, index);
+<a class="jxr_linenumber" name="69" href="#69">69</a>          assertHeaderContains(<span class="jxr_string">"expected header '"</span> + header + <span class="jxr_string">"' with value '"</span> + value + <span class="jxr_string">"' at index "</span> + index, response, header, value, index);
 <a class="jxr_linenumber" name="70" href="#70">70</a>      }
 <a class="jxr_linenumber" name="71" href="#71">71</a>      
 <a class="jxr_linenumber" name="72" href="#72">72</a>      <em class="jxr_javadoccomment">/**</em>
@@ -103,7 +103,7 @@
 <a class="jxr_linenumber" name="93" href="#93">93</a>  <em class="jxr_javadoccomment">     * @param value the value the header should contain</em>
 <a class="jxr_linenumber" name="94" href="#94">94</a>  <em class="jxr_javadoccomment">     */</em>
 <a class="jxr_linenumber" name="95" href="#95">95</a>      <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">void</strong> assertHeaderEquals(HttpResponse response, String header, String value) {
-<a class="jxr_linenumber" name="96" href="#96">96</a>          assertHeaderEquals(<strong class="jxr_keyword">null</strong>, response, header, value, 0);
+<a class="jxr_linenumber" name="96" href="#96">96</a>          assertHeaderEquals(<span class="jxr_string">"expected header '"</span> + header + <span class="jxr_string">"' with value '"</span> + value + '\'', response, header, value, 0);
 <a class="jxr_linenumber" name="97" href="#97">97</a>      }
 <a class="jxr_linenumber" name="98" href="#98">98</a>      
 <a class="jxr_linenumber" name="99" href="#99">99</a>      <em class="jxr_javadoccomment">/**</em>
@@ -127,7 +127,7 @@
 <a class="jxr_linenumber" name="117" href="#117">117</a> <em class="jxr_javadoccomment">     * @param index the index of the header</em>
 <a class="jxr_linenumber" name="118" href="#118">118</a> <em class="jxr_javadoccomment">     */</em>
 <a class="jxr_linenumber" name="119" href="#119">119</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">void</strong> assertHeaderEquals(HttpResponse response, String header, String value, <strong class="jxr_keyword">int</strong> index) {
-<a class="jxr_linenumber" name="120" href="#120">120</a>         assertHeaderEquals(<strong class="jxr_keyword">null</strong>, response, header, value, index);
+<a class="jxr_linenumber" name="120" href="#120">120</a>         assertHeaderEquals(<span class="jxr_string">"expected header '"</span> + header + <span class="jxr_string">"' with value '"</span> + value + <span class="jxr_string">"' at index "</span> + index, response, header, value, index);
 <a class="jxr_linenumber" name="121" href="#121">121</a>     }
 <a class="jxr_linenumber" name="122" href="#122">122</a>     
 <a class="jxr_linenumber" name="123" href="#123">123</a>     <em class="jxr_javadoccomment">/**</em>
@@ -154,7 +154,7 @@
 <a class="jxr_linenumber" name="144" href="#144">144</a> <em class="jxr_javadoccomment">     * @param value the value the header should contain</em>
 <a class="jxr_linenumber" name="145" href="#145">145</a> <em class="jxr_javadoccomment">     */</em>
 <a class="jxr_linenumber" name="146" href="#146">146</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">void</strong> assertHeaderEqualsIgnoresCase(HttpResponse response, String header, String value) {
-<a class="jxr_linenumber" name="147" href="#147">147</a>         assertHeaderEqualsIgnoresCase(<strong class="jxr_keyword">null</strong>, response, header, value, 0);
+<a class="jxr_linenumber" name="147" href="#147">147</a>         assertHeaderEqualsIgnoresCase(<span class="jxr_string">"expected header '"</span> + header + <span class="jxr_string">"' with value '"</span> + value + '\'', response, header, value, 0);
 <a class="jxr_linenumber" name="148" href="#148">148</a>     }
 <a class="jxr_linenumber" name="149" href="#149">149</a>     
 <a class="jxr_linenumber" name="150" href="#150">150</a>     <em class="jxr_javadoccomment">/**</em>
@@ -178,7 +178,7 @@
 <a class="jxr_linenumber" name="168" href="#168">168</a> <em class="jxr_javadoccomment">     * @param index the index of the header</em>
 <a class="jxr_linenumber" name="169" href="#169">169</a> <em class="jxr_javadoccomment">     */</em>
 <a class="jxr_linenumber" name="170" href="#170">170</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">void</strong> assertHeaderEqualsIgnoresCase(HttpResponse response, String header, String value, <strong class="jxr_keyword">int</strong> index) {
-<a class="jxr_linenumber" name="171" href="#171">171</a>         assertHeaderEqualsIgnoresCase(<strong class="jxr_keyword">null</strong>, response, header, value, index);
+<a class="jxr_linenumber" name="171" href="#171">171</a>         assertHeaderEqualsIgnoresCase(<span class="jxr_string">"expected header '"</span> + header + <span class="jxr_string">"' with value '"</span> + value + <span class="jxr_string">"' at index "</span> + index, response, header, value, index);
 <a class="jxr_linenumber" name="172" href="#172">172</a>     }
 <a class="jxr_linenumber" name="173" href="#173">173</a>     
 <a class="jxr_linenumber" name="174" href="#174">174</a>     <em class="jxr_javadoccomment">/**</em>
