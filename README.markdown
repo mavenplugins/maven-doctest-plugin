@@ -22,7 +22,7 @@ The maven dependency for doctesting::
 <dependency>
     <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
     <artifactId>doctest</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -36,7 +36,7 @@ The maven reporting-plugin::
         <plugin>
             <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest-plugin</artifactId>
-            <version>1.0.0</version>
+            <version>1.1.0</version>
         </plugin>
         ...
     </plugins>
@@ -64,11 +64,11 @@ A sample report would look like this: http://mavenplugins.github.com/maven-docte
 
 ```java
 import com.github.mavenplugins.doctest.AbstractRequestData;
-
+...
 @RunWith(DoctestRunner.class)
 public class ShowcaseDoctest {
 
-	class MyEndpoint extends AbstractRequestData {
+    class MyEndpoint extends AbstractRequestData {
         
         public URI getURI() throws URISyntaxException {
             return new URI("http://localhost:12345/my/endpoint");
@@ -80,6 +80,22 @@ public class ShowcaseDoctest {
      * This request should get a valid result!
      */
     @Doctest(value = MyEndpoint.class)
+    public void myDoctest(HttpResponse response) throws Exception {
+    }
+
+}
+```
+
+You can also use ``@SimpleDoctest`` since Version 1.1.0:
+
+```java
+@RunWith(DoctestRunner.class)
+public class ShowcaseDoctest {
+
+    /**
+     * This request should get a valid result!
+     */
+    @SimpleDoctest("http://localhost:12345/my/endpoint")
     public void myDoctest(HttpResponse response) throws Exception {
     }
 
@@ -115,7 +131,7 @@ The maven configuration looks like:
             <plugin>
                 <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
-                <version>1.0.0</version>
+                <version>1.1.0</version>
                 <dependencies>
                     <dependency>
                         <groupId>junit</groupId>
@@ -140,7 +156,7 @@ The maven configuration looks like:
         <dependency>
             <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest</artifactId>
-            <version>1.0.0</version>
+            <version>1.1.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -157,7 +173,7 @@ The maven configuration looks like:
             <plugin>
                 <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
-                <version>1.0.0</version>
+                <version>1.1.0</version>
             </plugin>
         </plugins>
     </reporting>
@@ -166,6 +182,72 @@ The maven configuration looks like:
 ```
 
 To get the doctest report type ``mvn clean install site``.
+
+## specify an order for your doctests
+
+With the ``@DoctestOrder`` annotation (since version 1.1.0) you can now determine the order in which the requests are performed:
+
+```java
+RunWith(DoctestRunner.class)
+public class ShowcaseDoctest {
+
+    @SimpleDoctest("http://localhost:12345/_prepareTest")
+    @DoctestOrder(Integer.MIN_VALUE)
+    public void prepare(HttpResponse response) throws Exception {
+    }
+    
+    @SimpleDoctest("http://localhost:12345/_printDebugInfo")
+    @DoctestOrder(Integer.MIN_VALUE)
+    public void printInitialState(HttpResponse response) throws Exception {
+    }
+    
+    @SimpleDoctest("http://localhost:12345/my/endpoint")
+    public void prepare(HttpResponse response) throws Exception {
+    }
+    
+    @SimpleDoctest("http://localhost:12345/_printDebugInfo")
+    @DoctestOrder(Integer.MAX_VALUE)
+    public void printState(HttpResponse response) throws Exception {
+    }
+    
+    @SimpleDoctest("http://localhost:12345/_cleanDB")
+    @DoctestOrder(Integer.MAX_VALUE)
+    public void cleanDB(HttpResponse response) throws Exception {
+    }
+
+}
+```
+
+The example above initializes the DB, prints some information before the test, doing the actual test and clean up the DB after the test.
+If no ``@DoctestOrder`` annotation could be found a value of ``0`` is assumed.
+
+## controlling the http client
+
+It's sometimes useful to have control over the way the http client handle redirects or other things.
+You can archive this on a per-testcase basis using the ``@DoctestClient`` annotation:
+
+```java
+RunWith(DoctestRunner.class)
+public class ShowcaseDoctest {
+
+    @SimpleDoctest("http://localhost:12345/my/endpoint")
+    @DoctestClient(handleRedirects = false)
+    public void testCorrectRedirection(HttpResponse response) throws Exception {
+    }
+
+}
+```
+
+The example above demonstrates how to disable automatic redirect following.
+This is especially useful when redirecting the client is the result of an endpoint.
+
+Options:
+
+* handleRedirects
+* rejectRelativeRedirects
+* allowCircularRedirects
+* maxRedirects
+* enableCompression
 
 ## expecting a special response
 
@@ -225,7 +307,7 @@ Examples:
 	"node1": {
 		"name": "node1",
 		"node1-1": {
-			name: "node1.1"
+			"name": "node1.1"
 		}
 	}
 }
