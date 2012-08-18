@@ -20,7 +20,7 @@ public class HttpResponseAssertUtils {
      * @param header the string chuck
      */
     public static void assertHeaderExists(HttpResponse response, String header) {
-        assertHeaderExists(null, response, header);
+        assertHeaderExists("expected header '" + header + '\'', response, header);
     }
     
     /**
@@ -42,7 +42,7 @@ public class HttpResponseAssertUtils {
      * @param value the value the header should contain
      */
     public static void assertHeaderContains(HttpResponse response, String header, String value) {
-        assertHeaderContains(null, response, header, value, 0);
+        assertHeaderContains("expected header '" + header + "' with value '" + value + '\'', response, header, value, 0);
     }
     
     /**
@@ -66,7 +66,7 @@ public class HttpResponseAssertUtils {
      * @param index the index of the header
      */
     public static void assertHeaderContains(HttpResponse response, String header, String value, int index) {
-        assertHeaderContains(null, response, header, value, index);
+        assertHeaderContains("expected header '" + header + "' with value '" + value + "' at index " + index, response, header, value, index);
     }
     
     /**
@@ -93,7 +93,7 @@ public class HttpResponseAssertUtils {
      * @param value the value the header should contain
      */
     public static void assertHeaderEquals(HttpResponse response, String header, String value) {
-        assertHeaderEquals(null, response, header, value, 0);
+        assertHeaderEquals("expected header '" + header + "' with value '" + value + '\'', response, header, value, 0);
     }
     
     /**
@@ -117,7 +117,7 @@ public class HttpResponseAssertUtils {
      * @param index the index of the header
      */
     public static void assertHeaderEquals(HttpResponse response, String header, String value, int index) {
-        assertHeaderEquals(null, response, header, value, index);
+        assertHeaderEquals("expected header '" + header + "' with value '" + value + "' at index " + index, response, header, value, index);
     }
     
     /**
@@ -144,7 +144,7 @@ public class HttpResponseAssertUtils {
      * @param value the value the header should contain
      */
     public static void assertHeaderEqualsIgnoresCase(HttpResponse response, String header, String value) {
-        assertHeaderEqualsIgnoresCase(null, response, header, value, 0);
+        assertHeaderEqualsIgnoresCase("expected header '" + header + "' with value '" + value + '\'', response, header, value, 0);
     }
     
     /**
@@ -168,7 +168,7 @@ public class HttpResponseAssertUtils {
      * @param index the index of the header
      */
     public static void assertHeaderEqualsIgnoresCase(HttpResponse response, String header, String value, int index) {
-        assertHeaderEqualsIgnoresCase(null, response, header, value, index);
+        assertHeaderEqualsIgnoresCase("expected header '" + header + "' with value '" + value + "' at index " + index, response, header, value, index);
     }
     
     /**
