@@ -202,7 +202,7 @@ public class ShowcaseDoctest {
     }
     
     @SimpleDoctest("http://localhost:12345/my/endpoint")
-    public void prepare(HttpResponse response) throws Exception {
+    public void myEndpoint(HttpResponse response) throws Exception {
     }
     
     @SimpleDoctest("http://localhost:12345/_printDebugInfo")
@@ -251,7 +251,7 @@ Options:
 
 ## stress-testing an endpoint
 
-You also have the possibility to perform a stress-test on an specific endpoint (since version 1.1.0):
+You also have the possibility to perform a stress-test on a specific endpoint (since version 1.1.0):
 
 ```java
 RunWith(DoctestRunner.class)
