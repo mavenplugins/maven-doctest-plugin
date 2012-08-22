@@ -1,6 +1,7 @@
 package com.github.mavenplugins.doctest;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -15,6 +16,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.prefs.Preferences;
 
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -57,6 +63,7 @@ import org.xml.sax.SAXException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.mavenplugins.doctest.DoctestConfig.AssertionMode;
 import com.github.mavenplugins.doctest.asserts.HttpResponseAssertUtils;
 import com.github.mavenplugins.doctest.expectations.ExpectHeader;
 import com.github.mavenplugins.doctest.expectations.ExpectHeaders;
@@ -151,34 +158,36 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
     protected Statement methodInvoker(final FrameworkMethod method, final Object test) {
         return new Statement() {
             
+            HttpResponse response = null;
+            byte[] responseData = null;
+            
             @Override
             public void evaluate() throws Throwable {
-                HttpResponse response = null;
-                HttpRequestBase request = null;
-                RequestData requestData;
-                DoctestClient clientConfig = method.getMethod().getAnnotation(DoctestClient.class);
-                DefaultHttpClient client = new DefaultHttpClient();
-                BasicCredentialsProvider credentialsProvider;
+                final HttpRequestBase request;
+                final RequestData requestData;
+                final DoctestClient clientConfig = method.getMethod().getAnnotation(DoctestClient.class);
+                final DoctestConfig doctestConfig = method.getMethod().getAnnotation(DoctestConfig.class);
                 Class<?>[] methodParameters = method.getMethod().getParameterTypes();
-                byte[] responseData = null;
                 byte[] requestEntityData = null;
                 final SimpleDoctest doctest;
                 final RequestResultWrapper wrapper = new RequestResultWrapper();
-                HttpParams params = new BasicHttpParams();
+                int requestCount;
+                int maxConcurrent;
+                ExecutorService executorService;
+                List<Future<Void>> futures;
+                List<Callable<Void>> tasks = new ArrayList<Callable<Void>>();
+                final DoctestConfig.AssertionMode assertionMode;
+                final ThreadLocal<DefaultHttpClient> clients;
                 
-                if (clientConfig == null || clientConfig.enableCompression()) {
-                    client.addRequestInterceptor(REQUEST_GZIP_INTERCEPTOR);
-                    client.addResponseInterceptor(RESPONSE_GZIP_INTERCEPTOR);
+                if (doctestConfig != null) {
+                    requestCount = doctestConfig.requestCount();
+                    maxConcurrent = doctestConfig.maxConcurrentRequests();
+                    assertionMode = doctestConfig.assertionMode();
+                } else {
+                    requestCount = 1;
+                    maxConcurrent = 1;
+                    assertionMode = AssertionMode.LAST;
                 }
-                
-                client.addRequestInterceptor(new HttpRequestInterceptor() {
-                    
-                    public void process(HttpRequest request, HttpContext context) throws HttpException, IOException {
-                        setRequestHeaders(request, wrapper);
-                        setRequestParameters(request, wrapper);
-                    }
-                    
-                });
                 
                 if (method.getMethod().isAnnotationPresent(Doctest.class)) {
                     requestData = instance(method, test, method.getMethod().getAnnotation(Doctest.class).value());
@@ -211,7 +220,7 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
                     };
                 }
                 
-                request = buildRequest(request, requestData);
+                request = buildRequest(requestData);
                 setRequestLine(request, wrapper);
                 
                 if (requestData.getHeaders() != null) {
@@ -227,30 +236,107 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
                     ((HttpEntityEnclosingRequestBase) request).setEntity(requestData.getHttpEntity());
                 }
                 
-                if (requestData.getCredentials() != null) {
-                    credentialsProvider = new BasicCredentialsProvider();
-                    credentialsProvider.setCredentials(AuthScope.ANY, requestData.getCredentials());
-                    client.setCredentialsProvider(credentialsProvider);
+                clients = new ThreadLocal<DefaultHttpClient>() {
+                    
+                    @Override
+                    protected DefaultHttpClient initialValue() {
+                        DefaultHttpClient client = new DefaultHttpClient();
+                        BasicCredentialsProvider credentialsProvider;
+                        HttpParams params = new BasicHttpParams();
+                        
+                        if (clientConfig == null || clientConfig.enableCompression()) {
+                            client.addRequestInterceptor(REQUEST_GZIP_INTERCEPTOR);
+                            client.addResponseInterceptor(RESPONSE_GZIP_INTERCEPTOR);
+                        }
+                        
+                        client.addRequestInterceptor(new HttpRequestInterceptor() {
+                            
+                            public void process(HttpRequest request, HttpContext context) throws HttpException, IOException {
+                                setRequestHeaders(request, wrapper);
+                                setRequestParameters(request, wrapper);
+                            }
+                            
+                        });
+                        
+                        if (requestData.getCredentials() != null) {
+                            credentialsProvider = new BasicCredentialsProvider();
+                            credentialsProvider.setCredentials(AuthScope.ANY, requestData.getCredentials());
+                            client.setCredentialsProvider(credentialsProvider);
+                        }
+                        
+                        if (clientConfig != null) {
+                            params.setBooleanParameter(ClientPNames.ALLOW_CIRCULAR_REDIRECTS, clientConfig.allowCircularRedirects());
+                            params.setBooleanParameter(ClientPNames.HANDLE_REDIRECTS, clientConfig.handleRedirects());
+                            params.setBooleanParameter(ClientPNames.REJECT_RELATIVE_REDIRECT, clientConfig.rejectRelativeRedirects());
+                            params.setIntParameter(ClientPNames.MAX_REDIRECTS, clientConfig.maxRedirects());
+                            client.setParams(params);
+                        }
+                        
+                        requestData.configureClient(client);
+                        
+                        return client;
+                    }
+                    
+                };
+                
+                try {
+                    executorService = Executors.newFixedThreadPool(maxConcurrent);
+                    
+                    for (int i = 0; i < requestCount; i++) {
+                        tasks.add(new Callable<Void>() {
+                            
+                            public Void call() throws Exception {
+                                DefaultHttpClient client = clients.get();
+                                int delay = doctestConfig == null ? 0 : doctestConfig.requestDelay();
+                                HttpResponse resp;
+                                byte[] tmp = null;
+                                
+                                try {
+                                    resp = client.execute(request);
+                                    
+                                    if (resp.getEntity() != null) {
+                                        tmp = EntityUtils.toByteArray(resp.getEntity());
+                                    }
+                                    
+                                    assertExpectations(method, resp);
+                                    
+                                    if (assertionMode == AssertionMode.FIRST && response == null) {
+                                        response = resp;
+                                        responseData = tmp;
+                                    } else {
+                                        response = resp;
+                                        responseData = tmp;
+                                    }
+                                } catch (Exception exception) {
+                                    fail(exception.getLocalizedMessage());
+                                    exception.printStackTrace();
+                                }
+                                // TODO: implement random
+                                
+                                if (delay > 0) {
+                                    Thread.sleep(delay);
+                                }
+                                
+                                return null;
+                            }
+                            
+                        });
+                    }
+                    
+                    futures = executorService.invokeAll(tasks);
+                    executorService.shutdown();
+                    executorService.awaitTermination(5, TimeUnit.MINUTES);
+                    
+                    for (Future<Void> future : futures) {
+                        future.get(5, TimeUnit.MINUTES);
+                    }
+                } catch (Exception exception) {
+                    fail(exception.getLocalizedMessage());
+                    exception.printStackTrace();
                 }
                 
-                if (clientConfig != null) {
-                    params.setBooleanParameter(ClientPNames.ALLOW_CIRCULAR_REDIRECTS, clientConfig.allowCircularRedirects());
-                    params.setBooleanParameter(ClientPNames.HANDLE_REDIRECTS, clientConfig.handleRedirects());
-                    params.setBooleanParameter(ClientPNames.REJECT_RELATIVE_REDIRECT, clientConfig.rejectRelativeRedirects());
-                    params.setIntParameter(ClientPNames.MAX_REDIRECTS, clientConfig.maxRedirects());
-                    client.setParams(params);
-                }
-                
-                requestData.configureClient(client);
-                
-                response = client.execute(request);
-                if (response.getEntity() != null) {
-                    responseData = EntityUtils.toByteArray(response.getEntity());
-                }
                 saveRequest(method, test, request, requestEntityData, wrapper);
                 saveResponse(method, test, response, responseData);
-                
-                assertExpectations(method, response);
                 
                 invokeTestMethod(method, test, response, methodParameters, responseData);
             }
@@ -564,7 +650,8 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
     /**
      * Builds the request based on the specified data..
      */
-    protected HttpRequestBase buildRequest(HttpRequestBase request, RequestData requestData) throws URISyntaxException {
+    protected HttpRequestBase buildRequest(RequestData requestData) throws URISyntaxException {
+        HttpRequestBase request = null;
         if (HttpGet.METHOD_NAME.equalsIgnoreCase(requestData.getMethod())) {
             request = new HttpGet(requestData.getURI());
         } else if (HttpPost.METHOD_NAME.equalsIgnoreCase(requestData.getMethod())) {

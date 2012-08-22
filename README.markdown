@@ -102,7 +102,7 @@ public class ShowcaseDoctest {
 }
 ```
 
-... assuming your Server is up an running during the test cases.
+... assuming your Server is up and running during the test cases.
 The maven configuration looks like:
 
 ```xml
@@ -202,7 +202,7 @@ public class ShowcaseDoctest {
     }
     
     @SimpleDoctest("http://localhost:12345/my/endpoint")
-    public void prepare(HttpResponse response) throws Exception {
+    public void myEndpoint(HttpResponse response) throws Exception {
     }
     
     @SimpleDoctest("http://localhost:12345/_printDebugInfo")
@@ -248,6 +248,32 @@ Options:
 * allowCircularRedirects
 * maxRedirects
 * enableCompression
+
+## stress-testing an endpoint
+
+You also have the possibility to perform a stress-test on a specific endpoint (since version 1.1.0):
+
+```java
+RunWith(DoctestRunner.class)
+public class ShowcaseDoctest {
+
+    @SimpleDoctest("http://localhost:12345/my/endpoint")
+    @DoctestConfig(maxConcurrentRequests = 32, requestCount = 1024, requestDelay = 1)
+    public void testCorrectConcurrencyHandling(HttpResponse response) throws Exception {
+    }
+
+}
+```
+
+The test above performs 1024 requests with 32 connections (and threads)
+the request delay determines the delay between each request per thread in milliseconds.
+
+Another option of the ``@DoctestConfig`` annotation is ``assertionMode``, which determines which response is passed to the test method.
+By default the assertionMode is set to LAST, which means that only the last response will be passed to the test-method.
+
+The test-method itself is only called once, but the ``@Expect...`` annotations are check for every response.
+
+If you don't specify a ``@DoctestConfig`` annotation, ``1`` request with ``1`` connection and no delay is applied.
 
 ## expecting a special response
 
