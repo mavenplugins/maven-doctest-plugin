@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<pmd version="4.3" timestamp="2012-08-22T22:13:34.981">
+<pmd version="4.3" timestamp="2012-08-23T20:37:45.653">
 <file name="D:\git\maven-doctest-plugin\doctest\src\main\java\com\github\mavenplugins\doctest\DoctestRunner.java">
-<violation beginline="443" endline="444" begincolumn="15" endcolumn="13" rule="EmptyCatchBlock" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="DoctestRunner" method="setRequestParameters" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#EmptyCatchBlock" priority="3">
+<violation beginline="343" endline="344" begincolumn="15" endcolumn="13" rule="EmptyCatchBlock" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="DoctestRunner" method="setRequestParameters" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#EmptyCatchBlock" priority="3">
 Avoid empty catch blocks
 </violation>
-<violation beginline="497" endline="499" begincolumn="20" endcolumn="13" rule="EmptyIfStmt" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="DoctestRunner" method="saveResponse" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#EmptyIfStmt" priority="3">
+<violation beginline="397" endline="399" begincolumn="20" endcolumn="13" rule="EmptyIfStmt" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="DoctestRunner" method="saveResponse" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#EmptyIfStmt" priority="3">
 Avoid empty if statements
 </violation>
-<violation beginline="555" endline="556" begincolumn="15" endcolumn="13" rule="EmptyCatchBlock" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="DoctestRunner" method="setResponseParameters" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#EmptyCatchBlock" priority="3">
+<violation beginline="455" endline="456" begincolumn="15" endcolumn="13" rule="EmptyCatchBlock" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="DoctestRunner" method="setResponseParameters" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#EmptyCatchBlock" priority="3">
 Avoid empty catch blocks
 </violation>
 </file>
