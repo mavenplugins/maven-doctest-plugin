@@ -14,16 +14,42 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface DoctestConfig {
     
+    /**
+     * This enum is used to determine which response is given to the test-method.
+     */
     public enum AssertionMode {
-        FIRST, RANDOM, LAST
+        /**
+         * The first incoming response.
+         */
+        FIRST,
+        /**
+         * Any response can be given to the test-method.
+         */
+        RANDOM,
+        /**
+         * The last incoming response.
+         */
+        LAST
     }
     
+    /**
+     * Determines how many requests should be performed.
+     */
     int requestCount() default 1;
     
+    /**
+     * Determines how many connections (and threads) should be used.
+     */
     int maxConcurrentRequests() default 1;
     
+    /**
+     * Determines the delay between the requests per thread in milliseconds.
+     */
     int requestDelay() default 0;
     
+    /**
+     * Defines the assertionMode.
+     */
     AssertionMode assertionMode() default AssertionMode.LAST;
     
 }
