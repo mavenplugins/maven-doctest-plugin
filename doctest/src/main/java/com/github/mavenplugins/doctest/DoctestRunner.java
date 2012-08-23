@@ -76,6 +76,22 @@ import com.github.mavenplugins.doctest.formatter.EntityFormatter;
 public class DoctestRunner extends BlockJUnit4ClassRunner {
     
     /**
+     * ThreadContext for responses.
+     */
+    protected class ResponseContext {
+        
+        /**
+         * The http response;
+         */
+        HttpResponse response = null;
+        /**
+         * The response payload.
+         */
+        byte[] responseData = null;
+        
+    }
+    
+    /**
      * An empty array for copying purpose.
      */
     private static final String[] EMPTY_STRING_ARRAY = new String[] {};
@@ -108,6 +124,17 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
      * The json mapper.
      */
     protected ObjectMapper jsonMapper = new ObjectMapper();
+    /**
+     * context object for asynchronous request execution.
+     */
+    protected ThreadLocal<ResponseContext> responses = new ThreadLocal<DoctestRunner.ResponseContext>() {
+        
+        @Override
+        protected ResponseContext initialValue() {
+            return new ResponseContext();
+        }
+        
+    };
     
     /**
      * constructs the runner with the given test class.
@@ -135,20 +162,27 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
                 DoctestOrder order1 = o1.getMethod().getAnnotation(DoctestOrder.class);
                 DoctestOrder order2 = o2.getMethod().getAnnotation(DoctestOrder.class);
                 
-                if (order1 != null && order2 != null) {
-                    return Integer.compare(order1.value(), order2.value());
-                } else if (order1 != null) {
-                    return Integer.compare(order1.value(), 0);
-                } else if (order2 != null) {
-                    return Integer.compare(0, order2.value());
-                }
-                
-                return 0;
+                return compareDoctestOrder(order1, order2);
             }
             
         });
         
         return list;
+    }
+    
+    /**
+     * Compares the two doctestOrder instances representing doctests.
+     */
+    protected int compareDoctestOrder(DoctestOrder order1, DoctestOrder order2) {
+        if (order1 != null && order2 != null) {
+            return Integer.compare(order1.value(), order2.value());
+        } else if (order1 != null) {
+            return Integer.compare(order1.value(), 0);
+        } else if (order2 != null) {
+            return Integer.compare(0, order2.value());
+        }
+        
+        return 0;
     }
     
     /**
@@ -158,9 +192,6 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
     protected Statement methodInvoker(final FrameworkMethod method, final Object test) {
         return new Statement() {
             
-            HttpResponse response = null;
-            byte[] responseData = null;
-            
             @Override
             public void evaluate() throws Throwable {
                 final HttpRequestBase request;
@@ -169,56 +200,11 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
                 final DoctestConfig doctestConfig = method.getMethod().getAnnotation(DoctestConfig.class);
                 Class<?>[] methodParameters = method.getMethod().getParameterTypes();
                 byte[] requestEntityData = null;
-                final SimpleDoctest doctest;
                 final RequestResultWrapper wrapper = new RequestResultWrapper();
-                int requestCount;
-                int maxConcurrent;
-                ExecutorService executorService;
-                List<Future<Void>> futures;
-                List<Callable<Void>> tasks = new ArrayList<Callable<Void>>();
-                final DoctestConfig.AssertionMode assertionMode;
                 final ThreadLocal<DefaultHttpClient> clients;
+                ResponseContext responseCtx = responses.get();
                 
-                if (doctestConfig != null) {
-                    requestCount = doctestConfig.requestCount();
-                    maxConcurrent = doctestConfig.maxConcurrentRequests();
-                    assertionMode = doctestConfig.assertionMode();
-                } else {
-                    requestCount = 1;
-                    maxConcurrent = 1;
-                    assertionMode = AssertionMode.LAST;
-                }
-                
-                if (method.getMethod().isAnnotationPresent(Doctest.class)) {
-                    requestData = instance(method, test, method.getMethod().getAnnotation(Doctest.class).value());
-                } else {
-                    doctest = method.getMethod().getAnnotation(SimpleDoctest.class);
-                    requestData = new AbstractRequestData() {
-                        
-                        public URI getURI() throws URISyntaxException {
-                            return new URI(doctest.value());
-                        }
-                        
-                        @Override
-                        public String getMethod() {
-                            return doctest.method();
-                        }
-                        
-                        @Override
-                        public Header[] getHeaders() {
-                            Header[] headers = new Header[doctest.header().length];
-                            int index = 0, i;
-                            
-                            for (String header : doctest.header()) {
-                                i = header.indexOf(':');
-                                headers[index++] = new BasicHeader(header.substring(0, i).trim(), header.substring(i + 1).trim());
-                            }
-                            
-                            return headers;
-                        };
-                        
-                    };
-                }
+                requestData = getRequestData(method, test);
                 
                 request = buildRequest(requestData);
                 setRequestLine(request, wrapper);
@@ -240,105 +226,19 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
                     
                     @Override
                     protected DefaultHttpClient initialValue() {
-                        DefaultHttpClient client = new DefaultHttpClient();
-                        BasicCredentialsProvider credentialsProvider;
-                        HttpParams params = new BasicHttpParams();
-                        
-                        if (clientConfig == null || clientConfig.enableCompression()) {
-                            client.addRequestInterceptor(REQUEST_GZIP_INTERCEPTOR);
-                            client.addResponseInterceptor(RESPONSE_GZIP_INTERCEPTOR);
-                        }
-                        
-                        client.addRequestInterceptor(new HttpRequestInterceptor() {
-                            
-                            public void process(HttpRequest request, HttpContext context) throws HttpException, IOException {
-                                setRequestHeaders(request, wrapper);
-                                setRequestParameters(request, wrapper);
-                            }
-                            
-                        });
-                        
-                        if (requestData.getCredentials() != null) {
-                            credentialsProvider = new BasicCredentialsProvider();
-                            credentialsProvider.setCredentials(AuthScope.ANY, requestData.getCredentials());
-                            client.setCredentialsProvider(credentialsProvider);
-                        }
-                        
-                        if (clientConfig != null) {
-                            params.setBooleanParameter(ClientPNames.ALLOW_CIRCULAR_REDIRECTS, clientConfig.allowCircularRedirects());
-                            params.setBooleanParameter(ClientPNames.HANDLE_REDIRECTS, clientConfig.handleRedirects());
-                            params.setBooleanParameter(ClientPNames.REJECT_RELATIVE_REDIRECT, clientConfig.rejectRelativeRedirects());
-                            params.setIntParameter(ClientPNames.MAX_REDIRECTS, clientConfig.maxRedirects());
-                            client.setParams(params);
-                        }
-                        
-                        requestData.configureClient(client);
-                        
-                        return client;
+                        return getHttpClient(requestData, clientConfig, wrapper);
                     }
                     
                 };
                 
-                try {
-                    executorService = Executors.newFixedThreadPool(maxConcurrent);
-                    
-                    for (int i = 0; i < requestCount; i++) {
-                        tasks.add(new Callable<Void>() {
-                            
-                            public Void call() throws Exception {
-                                DefaultHttpClient client = clients.get();
-                                int delay = doctestConfig == null ? 0 : doctestConfig.requestDelay();
-                                HttpResponse resp;
-                                byte[] tmp = null;
-                                
-                                try {
-                                    resp = client.execute(request);
-                                    
-                                    if (resp.getEntity() != null) {
-                                        tmp = EntityUtils.toByteArray(resp.getEntity());
-                                    }
-                                    
-                                    assertExpectations(method, resp);
-                                    
-                                    if (assertionMode == AssertionMode.FIRST && response == null) {
-                                        response = resp;
-                                        responseData = tmp;
-                                    } else {
-                                        response = resp;
-                                        responseData = tmp;
-                                    }
-                                } catch (Exception exception) {
-                                    fail(exception.getLocalizedMessage());
-                                    exception.printStackTrace();
-                                }
-                                // TODO: implement random
-                                
-                                if (delay > 0) {
-                                    Thread.sleep(delay);
-                                }
-                                
-                                return null;
-                            }
-                            
-                        });
-                    }
-                    
-                    futures = executorService.invokeAll(tasks);
-                    executorService.shutdown();
-                    executorService.awaitTermination(5, TimeUnit.MINUTES);
-                    
-                    for (Future<Void> future : futures) {
-                        future.get(5, TimeUnit.MINUTES);
-                    }
-                } catch (Exception exception) {
-                    fail(exception.getLocalizedMessage());
-                    exception.printStackTrace();
-                }
+                responseCtx.response = null;
+                responseCtx.responseData = null;
+                executeRequests(method, request, doctestConfig, clients);
                 
                 saveRequest(method, test, request, requestEntityData, wrapper);
-                saveResponse(method, test, response, responseData);
+                saveResponse(method, test, responseCtx.response, responseCtx.responseData);
                 
-                invokeTestMethod(method, test, response, methodParameters, responseData);
+                invokeTestMethod(method, test, responseCtx.response, methodParameters, responseCtx.responseData);
             }
             
         };
@@ -694,6 +594,180 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
                     method.invokeExplosively(test, response, jsonMapper.readTree(responseData));
                 }
             }
+        }
+    }
+    
+    /**
+     * Instances and configures the HTTP-client.
+     */
+    protected DefaultHttpClient getHttpClient(final RequestData requestData, final DoctestClient clientConfig, final RequestResultWrapper wrapper) {
+        DefaultHttpClient client = new DefaultHttpClient();
+        BasicCredentialsProvider credentialsProvider;
+        HttpParams params = new BasicHttpParams();
+        
+        if (clientConfig == null || clientConfig.enableCompression()) {
+            client.addRequestInterceptor(REQUEST_GZIP_INTERCEPTOR);
+            client.addResponseInterceptor(RESPONSE_GZIP_INTERCEPTOR);
+        }
+        
+        client.addRequestInterceptor(new HttpRequestInterceptor() {
+            
+            public void process(HttpRequest request, HttpContext context) throws HttpException, IOException {
+                setRequestHeaders(request, wrapper);
+                setRequestParameters(request, wrapper);
+            }
+            
+        });
+        
+        if (requestData.getCredentials() != null) {
+            credentialsProvider = new BasicCredentialsProvider();
+            credentialsProvider.setCredentials(AuthScope.ANY, requestData.getCredentials());
+            client.setCredentialsProvider(credentialsProvider);
+        }
+        
+        if (clientConfig != null) {
+            params.setBooleanParameter(ClientPNames.ALLOW_CIRCULAR_REDIRECTS, clientConfig.allowCircularRedirects());
+            params.setBooleanParameter(ClientPNames.HANDLE_REDIRECTS, clientConfig.handleRedirects());
+            params.setBooleanParameter(ClientPNames.REJECT_RELATIVE_REDIRECT, clientConfig.rejectRelativeRedirects());
+            params.setIntParameter(ClientPNames.MAX_REDIRECTS, clientConfig.maxRedirects());
+            client.setParams(params);
+        }
+        
+        requestData.configureClient(client);
+        
+        return client;
+    }
+    
+    /**
+     * Extracts the requestData from the doctest-method.
+     */
+    protected RequestData getRequestData(final FrameworkMethod method, final Object test) throws InstantiationException, IllegalAccessException,
+            InvocationTargetException, NoSuchMethodException {
+        RequestData requestData;
+        final SimpleDoctest doctest;
+        
+        if (method.getMethod().isAnnotationPresent(Doctest.class)) {
+            requestData = instance(method, test, method.getMethod().getAnnotation(Doctest.class).value());
+        } else {
+            doctest = method.getMethod().getAnnotation(SimpleDoctest.class);
+            requestData = new AbstractRequestData() {
+                
+                public URI getURI() throws URISyntaxException {
+                    return new URI(doctest.value());
+                }
+                
+                @Override
+                public String getMethod() {
+                    return doctest.method();
+                }
+                
+                @Override
+                public Header[] getHeaders() {
+                    Header[] headers = new Header[doctest.header().length];
+                    int index = 0, i;
+                    
+                    for (String header : doctest.header()) {
+                        i = header.indexOf(':');
+                        headers[index++] = new BasicHeader(header.substring(0, i).trim(), header.substring(i + 1).trim());
+                    }
+                    
+                    return headers;
+                };
+                
+            };
+        }
+        
+        return requestData;
+    }
+    
+    /**
+     * Performs a single request.
+     */
+    protected void executeRequest(final FrameworkMethod method,
+            final HttpRequestBase request,
+            final DoctestConfig doctestConfig,
+            final DoctestConfig.AssertionMode assertionMode,
+            final ThreadLocal<DefaultHttpClient> clients,
+            ResponseContext responseCtx) throws InterruptedException {
+        DefaultHttpClient client = clients.get();
+        int delay = doctestConfig == null ? 0 : doctestConfig.requestDelay();
+        HttpResponse resp;
+        byte[] tmp = null;
+        
+        try {
+            resp = client.execute(request);
+            
+            if (resp.getEntity() != null) {
+                tmp = EntityUtils.toByteArray(resp.getEntity());
+            }
+            
+            assertExpectations(method, resp);
+            
+            if (assertionMode == AssertionMode.FIRST && responseCtx.response == null) {
+                responseCtx.response = resp;
+                responseCtx.responseData = tmp;
+            } else {
+                responseCtx.response = resp;
+                responseCtx.responseData = tmp;
+            }
+            // TODO: implement random
+        } catch (Exception exception) {
+            fail(exception.getLocalizedMessage());
+        }
+        
+        if (delay > 0) {
+            Thread.sleep(delay);
+        }
+    }
+    
+    /**
+     * Executes all the requests the doctest specifies.
+     */
+    protected void executeRequests(final FrameworkMethod method,
+            final HttpRequestBase request,
+            final DoctestConfig doctestConfig,
+            final ThreadLocal<DefaultHttpClient> clients) {
+        ExecutorService executorService;
+        List<Future<Void>> futures;
+        List<Callable<Void>> tasks = new ArrayList<Callable<Void>>();
+        int requestCount;
+        int maxConcurrent;
+        final DoctestConfig.AssertionMode assertionMode;
+        final ResponseContext responseCtx = responses.get();
+        
+        if (doctestConfig != null) {
+            requestCount = doctestConfig.requestCount();
+            maxConcurrent = doctestConfig.maxConcurrentRequests();
+            assertionMode = doctestConfig.assertionMode();
+        } else {
+            requestCount = 1;
+            maxConcurrent = 1;
+            assertionMode = AssertionMode.LAST;
+        }
+        
+        try {
+            executorService = Executors.newFixedThreadPool(maxConcurrent);
+            
+            for (int i = 0; i < requestCount; i++) {
+                tasks.add(new Callable<Void>() {
+                    
+                    public Void call() throws Exception {
+                        executeRequest(method, request, doctestConfig, assertionMode, clients, responseCtx);
+                        return null;
+                    }
+                    
+                });
+            }
+            
+            futures = executorService.invokeAll(tasks);
+            executorService.shutdown();
+            executorService.awaitTermination(5, TimeUnit.MINUTES);
+            
+            for (Future<Void> future : futures) {
+                future.get(5, TimeUnit.MINUTES);
+            }
+        } catch (Exception exception) {
+            fail(exception.getLocalizedMessage());
         }
     }
     
