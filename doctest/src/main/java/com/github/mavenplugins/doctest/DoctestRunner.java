@@ -27,6 +27,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.http.Header;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpRequestInterceptor;
@@ -45,6 +46,8 @@ import org.apache.http.client.methods.HttpTrace;
 import org.apache.http.client.params.ClientPNames;
 import org.apache.http.client.protocol.RequestAcceptEncoding;
 import org.apache.http.client.protocol.ResponseContentEncoding;
+import org.apache.http.entity.BufferedHttpEntity;
+import org.apache.http.entity.mime.MultipartEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicHeader;
@@ -194,51 +197,15 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
             
             @Override
             public void evaluate() throws Throwable {
-                final HttpRequestBase request;
-                final RequestData requestData;
+                final RequestData[] requestData;
                 final DoctestClient clientConfig = method.getMethod().getAnnotation(DoctestClient.class);
                 final DoctestConfig doctestConfig = method.getMethod().getAnnotation(DoctestConfig.class);
-                Class<?>[] methodParameters = method.getMethod().getParameterTypes();
-                byte[] requestEntityData = null;
-                final RequestResultWrapper wrapper = new RequestResultWrapper();
-                final ThreadLocal<DefaultHttpClient> clients;
-                ResponseContext responseCtx = responses.get();
                 
                 requestData = getRequestData(method, test);
                 
-                request = buildRequest(requestData);
-                setRequestLine(request, wrapper);
-                
-                if (requestData.getHeaders() != null) {
-                    request.setHeaders(requestData.getHeaders());
+                for (RequestData data : requestData) {
+                    executeTestcase(method, test, data, clientConfig, doctestConfig);
                 }
-                
-                if (requestData.getParameters() != null) {
-                    request.setParams(requestData.getParameters());
-                }
-                
-                if (requestData.getHttpEntity() != null && request instanceof HttpEntityEnclosingRequestBase) {
-                    requestEntityData = EntityUtils.toByteArray(requestData.getHttpEntity());
-                    ((HttpEntityEnclosingRequestBase) request).setEntity(requestData.getHttpEntity());
-                }
-                
-                clients = new ThreadLocal<DefaultHttpClient>() {
-                    
-                    @Override
-                    protected DefaultHttpClient initialValue() {
-                        return getHttpClient(requestData, clientConfig, wrapper);
-                    }
-                    
-                };
-                
-                responseCtx.response = null;
-                responseCtx.responseData = null;
-                executeRequests(method, request, doctestConfig, clients);
-                
-                saveRequest(method, test, request, requestEntityData, wrapper);
-                saveResponse(method, test, responseCtx.response, responseCtx.responseData);
-                
-                invokeTestMethod(method, test, responseCtx.response, methodParameters, responseCtx.responseData);
             }
             
         };
@@ -247,12 +214,12 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
     /**
      * Verifies the expect-annotations, if any, of the method.
      */
-    protected void assertExpectations(FrameworkMethod method, HttpResponse response) {
+    protected void assertExpectations(FrameworkMethod method, HttpResponse response, RequestData requestClass) {
         ExpectStatus status = method.getMethod().getAnnotation(ExpectStatus.class);
         ExpectHeaders headers = method.getMethod().getAnnotation(ExpectHeaders.class);
         
         if (status != null) {
-            assertResponseStatus(response, status);
+            assertResponseStatus(response, status, requestClass);
         }
         
         if (headers != null) {
@@ -276,24 +243,32 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
     /**
      * Verifies if the expected status code was given.
      */
-    protected void assertResponseStatus(HttpResponse response, ExpectStatus status) {
-        assertEquals(status.value(), response.getStatusLine().getStatusCode());
+    protected void assertResponseStatus(HttpResponse response, ExpectStatus status, RequestData requestClass) {
+        assertEquals("Wrong Statuscode for request: " + requestClass.getClass().getSimpleName(), status.value(),
+                response.getStatusLine().getStatusCode());
         if (!status.message().equals("")) {
-            assertEquals(status.message(), response.getStatusLine().getReasonPhrase());
+            assertEquals("Wrong Status-line for request: " + requestClass.getClass().getSimpleName(), status.message(),
+                    response.getStatusLine().getReasonPhrase());
         }
     }
     
     /**
      * Saves the request data for later reporting.
      */
-    protected void saveRequest(FrameworkMethod method, Object test, HttpRequest request, byte[] requestData, RequestResultWrapper wrapper) throws Exception {
-        File file = new File(path, getRequestResultFileName(method));
+    protected void saveRequest(FrameworkMethod method,
+            Object test,
+            RequestData requestClass,
+            HttpRequest request,
+            byte[] requestData,
+            RequestResultWrapper wrapper) throws Exception {
+        File file = new File(path, getRequestResultFileName(method, requestClass));
         PrintStream stream = null;
         
         try {
             stream = new PrintStream(file);
-            if (request instanceof HttpEntityEnclosingRequestBase) {
-                setRequestEntity(method, test, (HttpEntityEnclosingRequestBase) request, requestData, wrapper, getFormatter(method));
+            if (request instanceof HttpEntityEnclosingRequestBase && requestData != null) {
+                setRequestEntity(method, test, (HttpEntityEnclosingRequestBase) request, requestData, wrapper,
+                        getFormatter(method));
             }
             jsonMapper.writeValue(stream, wrapper);
         } finally {
@@ -305,8 +280,9 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
     /**
      * Gets the filename for the result file using the specified method.
      */
-    protected String getRequestResultFileName(FrameworkMethod method) {
-        return getTestClass().getJavaClass().getName() + "-" + method.getName() + ".request";
+    protected String getRequestResultFileName(FrameworkMethod method, RequestData requestClass) {
+        return getTestClass().getJavaClass().getName() + "-" + method.getName() + "-"
+                + requestClass.getClass().getSimpleName() + ".request";
     }
     
     /**
@@ -317,8 +293,8 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
             HttpEntityEnclosingRequestBase request,
             byte[] requestData,
             RequestResultWrapper wrapper,
-            Class<? extends EntityFormatter> formatterType) throws InstantiationException, IllegalAccessException, InvocationTargetException,
-            NoSuchMethodException, Exception, IOException {
+            Class<? extends EntityFormatter> formatterType) throws InstantiationException, IllegalAccessException,
+            InvocationTargetException, NoSuchMethodException, Exception, IOException {
         EntityFormatter formatter;
         
         if ((formatter = instance(method, test, formatterType)) != null) {
@@ -380,8 +356,12 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
     /**
      * Saves the response data for reporting.
      */
-    protected void saveResponse(FrameworkMethod method, Object test, HttpResponse response, byte[] responseData) throws Exception {
-        File file = new File(path, getResponseResultFileName(method));
+    protected void saveResponse(FrameworkMethod method,
+            Object test,
+            RequestData requestClass,
+            HttpResponse response,
+            byte[] responseData) throws Exception {
+        File file = new File(path, getResponseResultFileName(method, requestClass));
         PrintStream stream = null;
         ResponseResultWrapper wrapper;
         
@@ -415,8 +395,9 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
     /**
      * Gets the filename for the response result file.
      */
-    protected String getResponseResultFileName(FrameworkMethod method) {
-        return getTestClass().getJavaClass().getName() + "-" + method.getName() + ".response";
+    protected String getResponseResultFileName(FrameworkMethod method, RequestData requestClass) {
+        return getTestClass().getJavaClass().getName() + "-" + method.getName() + "-"
+                + requestClass.getClass().getSimpleName() + ".response";
     }
     
     /**
@@ -427,8 +408,8 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
             HttpResponse response,
             byte[] responseData,
             ResponseResultWrapper wrapper,
-            Class<? extends EntityFormatter> formatterType) throws InstantiationException, IllegalAccessException, InvocationTargetException,
-            NoSuchMethodException, Exception, IOException {
+            Class<? extends EntityFormatter> formatterType) throws InstantiationException, IllegalAccessException,
+            InvocationTargetException, NoSuchMethodException, Exception, IOException {
         EntityFormatter formatter;
         
         if (responseData != null) {
@@ -491,15 +472,17 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
     /**
      * Instantiates the given type.
      */
-    protected <T> T instance(FrameworkMethod method, Object test, Class<T> type) throws InstantiationException, IllegalAccessException,
-            IllegalArgumentException, InvocationTargetException, SecurityException, NoSuchMethodException {
+    protected <T> T instance(FrameworkMethod method, Object test, Class<T> type) throws InstantiationException,
+            IllegalAccessException, IllegalArgumentException, InvocationTargetException, SecurityException,
+            NoSuchMethodException {
         Constructor<T> constructor;
         
         if (type == null || type.isInterface() || Modifier.isAbstract(type.getModifiers())) {
             return null;
         }
         
-        if (type.getEnclosingClass() != null && type.getEnclosingClass().equals(getTestClass().getJavaClass()) && !Modifier.isStatic(type.getModifiers())) {
+        if (type.getEnclosingClass() != null && type.getEnclosingClass().equals(getTestClass().getJavaClass())
+                && !Modifier.isStatic(type.getModifiers())) {
             constructor = type.getDeclaredConstructor(getTestClass().getJavaClass());
             
             if (!constructor.isAccessible()) {
@@ -536,8 +519,10 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
             
             valid = parameters.length == 1 && HttpResponse.class.isAssignableFrom(parameters[0]);
             if (!valid) {
-                valid = parameters.length == 2 && HttpResponse.class.isAssignableFrom(parameters[0])
-                        && (JsonNode.class.isAssignableFrom(parameters[1]) || Document.class.isAssignableFrom(parameters[1]));
+                valid = parameters.length == 2
+                        && HttpResponse.class.isAssignableFrom(parameters[0])
+                        && (JsonNode.class.isAssignableFrom(parameters[1]) || Document.class
+                                .isAssignableFrom(parameters[1]));
             }
             
             if (!valid) {
@@ -575,8 +560,12 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
     /**
      * Actually runs the test method.
      */
-    protected void invokeTestMethod(final FrameworkMethod method, final Object test, HttpResponse response, Class<?>[] methodParameters, byte[] responseData)
-            throws Throwable, SAXException, IOException, ParserConfigurationException, JsonProcessingException {
+    protected void invokeTestMethod(final FrameworkMethod method,
+            final Object test,
+            HttpResponse response,
+            Class<?>[] methodParameters,
+            byte[] responseData) throws Throwable, SAXException, IOException, ParserConfigurationException,
+            JsonProcessingException {
         if (methodParameters.length == 1) {
             method.invokeExplosively(test, response);
         } else if (methodParameters.length == 2) {
@@ -584,8 +573,8 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
                 if (responseData == null || responseData.length == 0) {
                     method.invokeExplosively(test, response, null);
                 } else {
-                    method.invokeExplosively(test, response,
-                            DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(new ByteArrayInputStream(responseData)));
+                    method.invokeExplosively(test, response, DocumentBuilderFactory.newInstance().newDocumentBuilder()
+                            .parse(new ByteArrayInputStream(responseData)));
                 }
             } else if (JsonNode.class.isAssignableFrom(methodParameters[1]) && response.getEntity() != null) {
                 if (responseData == null || responseData.length == 0) {
@@ -593,6 +582,8 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
                 } else {
                     method.invokeExplosively(test, response, jsonMapper.readTree(responseData));
                 }
+            } else if (byte[].class.isAssignableFrom(methodParameters[1])) {
+                method.invokeExplosively(test, response, responseData);
             }
         }
     }
@@ -600,7 +591,9 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
     /**
      * Instances and configures the HTTP-client.
      */
-    protected DefaultHttpClient getHttpClient(final RequestData requestData, final DoctestClient clientConfig, final RequestResultWrapper wrapper) {
+    protected DefaultHttpClient getHttpClient(final RequestData requestData,
+            final DoctestClient clientConfig,
+            final RequestResultWrapper wrapper) {
         DefaultHttpClient client = new DefaultHttpClient();
         BasicCredentialsProvider credentialsProvider;
         HttpParams params = new BasicHttpParams();
@@ -641,16 +634,22 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
     /**
      * Extracts the requestData from the doctest-method.
      */
-    protected RequestData getRequestData(final FrameworkMethod method, final Object test) throws InstantiationException, IllegalAccessException,
-            InvocationTargetException, NoSuchMethodException {
-        RequestData requestData;
+    protected RequestData[] getRequestData(final FrameworkMethod method, final Object test)
+            throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException {
+        RequestData[] requestData;
         final SimpleDoctest doctest;
+        Class<? extends RequestData>[] requestClasses;
         
         if (method.getMethod().isAnnotationPresent(Doctest.class)) {
-            requestData = instance(method, test, method.getMethod().getAnnotation(Doctest.class).value());
+            requestClasses = method.getMethod().getAnnotation(Doctest.class).value();
+            
+            requestData = new RequestData[requestClasses.length];
+            for (int i = 0; i < requestClasses.length; i++) {
+                requestData[i] = instance(method, test, requestClasses[i]);
+            }
         } else {
             doctest = method.getMethod().getAnnotation(SimpleDoctest.class);
-            requestData = new AbstractRequestData() {
+            requestData = new RequestData[] { new AbstractRequestData() {
                 
                 public URI getURI() throws URISyntaxException {
                     return new URI(doctest.value());
@@ -668,13 +667,14 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
                     
                     for (String header : doctest.header()) {
                         i = header.indexOf(':');
-                        headers[index++] = new BasicHeader(header.substring(0, i).trim(), header.substring(i + 1).trim());
+                        headers[index++] = new BasicHeader(header.substring(0, i).trim(), header.substring(i + 1)
+                                .trim());
                     }
                     
                     return headers;
                 };
                 
-            };
+            } };
         }
         
         return requestData;
@@ -688,7 +688,8 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
             final DoctestConfig doctestConfig,
             final DoctestConfig.AssertionMode assertionMode,
             final ThreadLocal<DefaultHttpClient> clients,
-            ResponseContext responseCtx) throws InterruptedException {
+            ResponseContext responseCtx,
+            RequestData requestClass) throws InterruptedException {
         DefaultHttpClient client = clients.get();
         int delay = doctestConfig == null ? 0 : doctestConfig.requestDelay();
         HttpResponse resp;
@@ -698,10 +699,11 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
             resp = client.execute(request);
             
             if (resp.getEntity() != null) {
+                resp.setEntity(new BufferedHttpEntity(resp.getEntity()));
                 tmp = EntityUtils.toByteArray(resp.getEntity());
             }
             
-            assertExpectations(method, resp);
+            assertExpectations(method, resp, requestClass);
             
             if (assertionMode == AssertionMode.FIRST && responseCtx.response == null) {
                 responseCtx.response = resp;
@@ -726,7 +728,8 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
     protected void executeRequests(final FrameworkMethod method,
             final HttpRequestBase request,
             final DoctestConfig doctestConfig,
-            final ThreadLocal<DefaultHttpClient> clients) {
+            final ThreadLocal<DefaultHttpClient> clients,
+            final RequestData requestClass) {
         ExecutorService executorService;
         List<Future<Void>> futures;
         List<Callable<Void>> tasks = new ArrayList<Callable<Void>>();
@@ -752,7 +755,8 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
                 tasks.add(new Callable<Void>() {
                     
                     public Void call() throws Exception {
-                        executeRequest(method, request, doctestConfig, assertionMode, clients, responseCtx);
+                        executeRequest(method, request, doctestConfig, assertionMode, clients, responseCtx,
+                                requestClass);
                         return null;
                     }
                     
@@ -769,6 +773,74 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         } catch (Exception exception) {
             fail(exception.getLocalizedMessage());
         }
+    }
+    
+    /**
+     * Executes the request.
+     * 
+     * @param method
+     * @param test
+     * @param requestData
+     * @param clientConfig
+     * @param doctestConfig
+     * @throws URISyntaxException
+     * @throws IOException
+     * @throws Exception
+     * @throws Throwable
+     * @throws SAXException
+     * @throws ParserConfigurationException
+     * @throws JsonProcessingException
+     */
+    protected void executeTestcase(final FrameworkMethod method,
+            final Object test,
+            final RequestData requestData,
+            final DoctestClient clientConfig,
+            final DoctestConfig doctestConfig) throws URISyntaxException, IOException, Exception, Throwable,
+            SAXException, ParserConfigurationException, JsonProcessingException {
+        final HttpRequestBase request;
+        final ThreadLocal<DefaultHttpClient> clients;
+        final RequestResultWrapper wrapper = new RequestResultWrapper();
+        Class<?>[] methodParameters = method.getMethod().getParameterTypes();
+        byte[] requestEntityData = null;
+        ResponseContext responseCtx = responses.get();
+        HttpEntity entity;
+        
+        request = buildRequest(requestData);
+        setRequestLine(request, wrapper);
+        
+        if (requestData.getHeaders() != null) {
+            request.setHeaders(requestData.getHeaders());
+        }
+        
+        if (requestData.getParameters() != null) {
+            request.setParams(requestData.getParameters());
+        }
+        
+        entity = requestData.getHttpEntity();
+        if (entity != null && request instanceof HttpEntityEnclosingRequestBase) {
+            if (!(entity instanceof MultipartEntity)) {
+                requestEntityData = EntityUtils.toByteArray(entity);
+            }
+            ((HttpEntityEnclosingRequestBase) request).setEntity(entity);
+        }
+        
+        clients = new ThreadLocal<DefaultHttpClient>() {
+            
+            @Override
+            protected DefaultHttpClient initialValue() {
+                return getHttpClient(requestData, clientConfig, wrapper);
+            }
+            
+        };
+        
+        responseCtx.response = null;
+        responseCtx.responseData = null;
+        executeRequests(method, request, doctestConfig, clients, requestData);
+        
+        saveRequest(method, test, requestData, request, requestEntityData, wrapper);
+        saveResponse(method, test, requestData, responseCtx.response, responseCtx.responseData);
+        
+        invokeTestMethod(method, test, responseCtx.response, methodParameters, responseCtx.responseData);
     }
     
 }

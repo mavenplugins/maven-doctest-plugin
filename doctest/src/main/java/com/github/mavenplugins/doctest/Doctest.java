@@ -19,7 +19,7 @@ public @interface Doctest {
     /**
      * Gets the request configuration
      */
-    Class<? extends RequestData> value();
+    Class<? extends RequestData>[] value();
     
     /**
      * Gets the formatter for the response.

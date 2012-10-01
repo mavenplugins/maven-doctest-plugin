@@ -22,7 +22,7 @@ The maven dependency for doctesting::
 <dependency>
     <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
     <artifactId>doctest</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -36,7 +36,7 @@ The maven reporting-plugin::
         <plugin>
             <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest-plugin</artifactId>
-            <version>1.1.0</version>
+            <version>1.2.0</version>
         </plugin>
         ...
     </plugins>
@@ -131,7 +131,7 @@ The maven configuration looks like:
             <plugin>
                 <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
-                <version>1.1.0</version>
+                <version>1.2.0</version>
                 <dependencies>
                     <dependency>
                         <groupId>junit</groupId>
@@ -156,7 +156,7 @@ The maven configuration looks like:
         <dependency>
             <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest</artifactId>
-            <version>1.1.0</version>
+            <version>1.2.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -173,7 +173,7 @@ The maven configuration looks like:
             <plugin>
                 <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
-                <version>1.1.0</version>
+                <version>1.2.0</version>
             </plugin>
         </plugins>
     </reporting>
@@ -302,6 +302,7 @@ Currently are only these doctest method signatures allowed:
 * public void ``name``(org.apache.http.HttpResponse)
 * public void ``name``(org.apache.http.HttpResponse, com.fasterxml.jackson.databind.JsonNode)
 * public void ``name``(org.apache.http.HttpResponse, org.w3c.dom.Document)
+* public void ``name``(org.apache.http.HttpResponse, byte[])
 
 A doctest-methods also have to be annotated with ``@Doctest``. Methods annotated with ``@Test`` are entirely ignored.
 The test class have to be annotated ``@RunWith(DoctestRunner.class)``.
@@ -346,3 +347,77 @@ JsonAssertUtils.assertExists("should fail", node, "//*[@name='node1.2']");
 ```
 
 If you are already familiar with XPath you see the powerful, easy to use response verification ...
+
+## Examples
+
+### File upload
+
+```java
+@RunWith(DoctestRunner.class)
+public class UploadDoctest {
+    
+    class Upload extends AbstractRequestData {
+        
+        @Override
+        public URI getURI() throws URISyntaxException {
+            return new URI("http://localhost:12345/upload");
+        }
+        
+        @Override
+        public String getMethod() {
+            return HttpPost.METHOD_NAME;
+        }
+        
+        @Override
+        public HttpEntity getHttpEntity() {
+            MultipartEntity m = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
+            
+            try {
+                m.addPart("name", new StringBody("title", "text/plain", Charset.forName("UTF-8")));
+                m.addPart("file", new FileBody(new File("./src/test/resources/images/test.gif"), "image/gif"));
+            } catch (Exception exception) {
+                exception.printStackTrace();
+            }
+            
+            return m;
+        }
+        
+    }
+    
+     /**
+      * returns a JSON object like:
+      * {
+      *     'name': 'filename',
+      *     'size': 1234567,
+      *     'contentType': 'image/gif'
+      * }
+      */
+    @Doctest(Upload.class)
+    @DoctestOrder(1)
+    @ExpectStatus(201)
+    @ExpectHeaders({ @ExpectHeader(name = "Content-Type", content = "application/json.*") })
+    public void upload(HttpResponse response, JsonNode node) throws Exception {
+        assertTrue(node.isObject());
+        JsonAssertUtils.assertExists(node, "/name['title']");
+        JsonAssertUtils.assertExists(node, "/size['668418']");
+        JsonAssertUtils.assertExists(node, "/contentType['image/gif']");
+    }
+    
+    /**
+     * Receives the binary file.
+     */
+    @SimpleDoctest("http://localhost:12345/download/file1")
+    @DoctestOrder(2)
+    @ExpectStatus(200)
+    @ExpectHeaders({ @ExpectHeader(name = "Content-Type", content = "image/gif") })
+    public void download(HttpResponse response) throws Exception {
+        assertTrue(
+            Arrays.equals(
+                FileUtils.readFileToByteArray(new File("./src/test/resources/images/test.gif")),
+                EntityUtils.toByteArray(response.getEntity())
+            )
+        );
+    }
+    
+}
+```
