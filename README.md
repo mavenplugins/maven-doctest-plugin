@@ -10,7 +10,7 @@ This project tries to enable java developers to benefit from the same testing co
 
 # Requirements / Dependencies
 
-* Java 1.5+ (http://www.java.com/de/download/)
+* Java 1.6+ (http://www.java.com/de/download/)
 * JUnit 4+ (http://www.junit.org/)
 * Jackson 2.0.2+ (https://github.com/FasterXML/jackson-core/)
 
@@ -22,7 +22,7 @@ The maven dependency for doctesting::
 <dependency>
     <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
     <artifactId>doctest</artifactId>
-    <version>1.2.0</version>
+    <version>1.3.0</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -36,7 +36,7 @@ The maven reporting-plugin::
         <plugin>
             <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest-plugin</artifactId>
-            <version>1.2.0</version>
+            <version>1.3.0</version>
         </plugin>
         ...
     </plugins>
@@ -131,7 +131,7 @@ The maven configuration looks like:
             <plugin>
                 <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
-                <version>1.2.0</version>
+                <version>1.3.0</version>
                 <dependencies>
                     <dependency>
                         <groupId>junit</groupId>
@@ -156,7 +156,7 @@ The maven configuration looks like:
         <dependency>
             <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest</artifactId>
-            <version>1.2.0</version>
+            <version>1.3.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -173,7 +173,7 @@ The maven configuration looks like:
             <plugin>
                 <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
-                <version>1.2.0</version>
+                <version>1.3.0</version>
             </plugin>
         </plugins>
     </reporting>
@@ -347,6 +347,93 @@ JsonAssertUtils.assertExists("should fail", node, "//*[@name='node1.2']");
 ```
 
 If you are already familiar with XPath you see the powerful, easy to use response verification ...
+
+## Sending Data
+
+### Form Data
+
+```java
+class Upload extends AbstractRequestData {
+    
+    @Override
+    public URI getURI() throws URISyntaxException {
+        return ...;
+    }
+    
+    @Override
+    public String getMethod() {
+        return HttpPost.METHOD_NAME;
+    }
+    
+    @Override
+    public HttpEntity getHttpEntity() {
+        MultipartEntity m = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
+        
+        try {
+            m.addPart("name", new StringBody("title", "text/plain", Charset.forName("UTF-8")));
+            m.addPart("file", new FileBody(new File("./src/test/resources/images/test.gif"), "image/gif"));
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        }
+        
+        return m;
+    }
+    
+}
+```
+
+### JSON Data
+
+```java
+class Upload extends AbstractRequestData {
+    
+    @Override
+    public URI getURI() throws URISyntaxException {
+        return ...;
+    }
+    
+    @Override
+    public String getMethod() {
+        return HttpPut.METHOD_NAME;
+    }
+    
+    @Override
+    public HttpEntity getHttpEntity() {
+        UserObject user = new UserObject();
+        
+        user.setName("name");
+        user.setAge(34);
+        ...
+        
+        return getJsonHttpEntity(user);
+    }
+    
+}
+```
+
+### Custom Data
+
+```java
+class Upload extends AbstractRequestData {
+    
+    @Override
+    public URI getURI() throws URISyntaxException {
+        return ...;
+    }
+    
+    @Override
+    public String getMethod() {
+        return HttpPut.METHOD_NAME;
+    }
+    
+    @Override
+    public HttpEntity getHttpEntity() {
+        return new ByteArrayEntity("{\"name\":\"Jack\",\"age\":34}".getBytes(), ContentType.APPLICATION_JSON);;
+    }
+    
+}
+```
+
 
 ## Examples
 

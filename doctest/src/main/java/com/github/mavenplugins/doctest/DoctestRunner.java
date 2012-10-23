@@ -178,11 +178,11 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
      */
     protected int compareDoctestOrder(DoctestOrder order1, DoctestOrder order2) {
         if (order1 != null && order2 != null) {
-            return Integer.compare(order1.value(), order2.value());
+            return Integer.valueOf(order1.value()).compareTo(order2.value());
         } else if (order1 != null) {
-            return Integer.compare(order1.value(), 0);
+            return Integer.valueOf(order1.value()).compareTo(0);
         } else if (order2 != null) {
-            return Integer.compare(0, order2.value());
+            return Integer.valueOf(0).compareTo(order2.value());
         }
         
         return 0;
@@ -521,13 +521,14 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
             if (!valid) {
                 valid = parameters.length == 2
                         && HttpResponse.class.isAssignableFrom(parameters[0])
-                        && (JsonNode.class.isAssignableFrom(parameters[1]) || Document.class
-                                .isAssignableFrom(parameters[1]));
+                        && (JsonNode.class.isAssignableFrom(parameters[1])
+                                || Document.class.isAssignableFrom(parameters[1]) || byte[].class
+                                    .isAssignableFrom(parameters[1]));
             }
             
             if (!valid) {
                 errors.add(new IllegalArgumentException(
-                        "doctest methods needs to have the first parameter of type org.apache.http.HttpResponse and optionally the second as com.fasterxml.jackson.databind.JsonNode or org.w3c.dom.Document."));
+                        "doctest methods needs to have the first parameter of type org.apache.http.HttpResponse and optionally the second as com.fasterxml.jackson.databind.JsonNode, org.w3c.dom.Document or byte[]."));
             }
         }
     }
