@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<pmd version="4.3" timestamp="2012-10-01T22:15:55.036">
+<pmd version="4.3" timestamp="2012-10-23T18:43:31.884">
 <file name="D:\git\maven-doctest-plugin\doctest\src\main\java\com\github\mavenplugins\doctest\DoctestRunner.java">
 <violation beginline="319" endline="320" begincolumn="15" endcolumn="13" rule="EmptyCatchBlock" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="DoctestRunner" method="setRequestParameters" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#EmptyCatchBlock" priority="3">
 Avoid empty catch blocks
