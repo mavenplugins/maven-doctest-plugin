@@ -12,7 +12,7 @@ This project tries to enable java developers to benefit from the same testing co
 
 * Java 1.6+ (http://www.java.com/de/download/)
 * JUnit 4+ (http://www.junit.org/)
-* Jackson 2.0.2+ (https://github.com/FasterXML/jackson-core/)
+* Jackson 2+ (https://github.com/FasterXML/jackson-core/)
 
 # How to get it
 
@@ -22,7 +22,7 @@ The maven dependency for doctesting::
 <dependency>
     <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
     <artifactId>doctest</artifactId>
-    <version>1.3.0</version>
+    <version>1.4.0</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -36,7 +36,7 @@ The maven reporting-plugin::
         <plugin>
             <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest-plugin</artifactId>
-            <version>1.3.0</version>
+            <version>1.4.0</version>
         </plugin>
         ...
     </plugins>
@@ -131,7 +131,7 @@ The maven configuration looks like:
             <plugin>
                 <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
-                <version>1.3.0</version>
+                <version>1.4.0</version>
                 <dependencies>
                     <dependency>
                         <groupId>junit</groupId>
@@ -156,7 +156,7 @@ The maven configuration looks like:
         <dependency>
             <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest</artifactId>
-            <version>1.3.0</version>
+            <version>1.4.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -173,7 +173,7 @@ The maven configuration looks like:
             <plugin>
                 <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
-                <version>1.3.0</version>
+                <version>1.4.0</version>
             </plugin>
         </plugins>
     </reporting>
@@ -303,8 +303,11 @@ Currently are only these doctest method signatures allowed:
 * public void ``name``(org.apache.http.HttpResponse, com.fasterxml.jackson.databind.JsonNode)
 * public void ``name``(org.apache.http.HttpResponse, org.w3c.dom.Document)
 * public void ``name``(org.apache.http.HttpResponse, byte[])
+* public void ``name``(org.apache.http.HttpResponse, java.lang.String)
+* public void ``name``(org.apache.http.HttpResponse, <any java bean>)
 
-A doctest-methods also have to be annotated with ``@Doctest``. Methods annotated with ``@Test`` are entirely ignored.
+A doctest-methods also have to be annotated with ``@Doctest`` (or ``@SimpleDoctest``).
+Methods annotated with ``@Test`` are entirely ignored.
 The test class have to be annotated ``@RunWith(DoctestRunner.class)``.
 
 ## formating responses for the report
@@ -347,6 +350,58 @@ JsonAssertUtils.assertExists("should fail", node, "//*[@name='node1.2']");
 ```
 
 If you are already familiar with XPath you see the powerful, easy to use response verification ...
+
+Another way (since version 1.4.0) would be to let the doctest lib deserialize the response entity for you:
+
+```java
+RunWith(DoctestRunner.class)
+public class ShowcaseDoctest {
+
+    class User {
+    
+        protected String username;
+        protected String id;
+        
+        public String getUsername() {
+            return username;
+        }
+        
+        public void setUsername(String username) {
+            this.username = username;
+        }
+        
+        public String getId() {
+            return id;
+        }
+        
+        public void setId(String id) {
+            this.id = id;
+        }
+        
+    }
+
+    @SimpleDoctest("http://localhost:12345/my/xml/endpoint")
+    public void gettingXMLDocument(HttpResponse response, Document document) {
+        ...
+    }
+
+    @SimpleDoctest("http://localhost:12345/my/xml/endpoint")
+    public void gettingObjectsDirectlyXML(HttpResponse response, User user) {
+        assertEquals("mike", user.getUsername());
+    }
+
+    @SimpleDoctest("http://localhost:12345/my/json/endpoint")
+    public void gettingJsonNode(HttpResponse response, JsonNode node) {
+        ...
+    }
+
+    @SimpleDoctest("http://localhost:12345/my/json/endpoint")
+    public void gettingObjectsDirectlyJSON(HttpResponse response, User user) {
+        assertEquals("mike", user.getUsername());
+    }
+
+}
+```
 
 ## Sending Data
 

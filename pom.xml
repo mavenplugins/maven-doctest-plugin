@@ -10,7 +10,7 @@
     <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
     <artifactId>parent</artifactId>
     <packaging>pom</packaging>
-    <version>1.3.0</version>
+    <version>1.4.0</version>
 
     <name>Doctest Maven Plugin</name>
     <inceptionYear>2012</inceptionYear>
