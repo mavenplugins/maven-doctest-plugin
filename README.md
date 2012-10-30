@@ -22,7 +22,7 @@ The maven dependency for doctesting::
 <dependency>
     <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
     <artifactId>doctest</artifactId>
-    <version>1.4.0</version>
+    <version>1.5.0</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -36,7 +36,7 @@ The maven reporting-plugin::
         <plugin>
             <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest-plugin</artifactId>
-            <version>1.4.0</version>
+            <version>1.5.0</version>
         </plugin>
         ...
     </plugins>
@@ -131,7 +131,7 @@ The maven configuration looks like:
             <plugin>
                 <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
-                <version>1.4.0</version>
+                <version>1.5.0</version>
                 <dependencies>
                     <dependency>
                         <groupId>junit</groupId>
@@ -156,7 +156,7 @@ The maven configuration looks like:
         <dependency>
             <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest</artifactId>
-            <version>1.4.0</version>
+            <version>1.5.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -173,7 +173,7 @@ The maven configuration looks like:
             <plugin>
                 <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
-                <version>1.4.0</version>
+                <version>1.5.0</version>
             </plugin>
         </plugins>
     </reporting>
@@ -295,6 +295,90 @@ public void myJsonTest(HttpResponse response, JsonNode document) throws Exceptio
 }
 ```
 
+## Cookie-Sharing between requests
+
+Since version 1.5.0 it's possible to define custom cookie scopes between different request within the one Test-Class.
+Before that every request had it's own cookie-store - which means that a cookie set by the server-response were totally
+ignored by the following request.
+
+Now you can assign a cookie-store to more than one request - which is pretty useful for cookie-session handling.
+
+The ``DoctestCookieConfig`` annotation allows you to define (at method and class level) how to store cookies for the
+next request.
+
+```java
+RunWith(DoctestRunner.class)
+@DoctestCookieConfig(name = "default", store = Store.NEW)
+public class ShowcaseDoctest {
+
+    @SimpleDoctest("http://localhost:12345/endpoint/which/sets/cookies")
+    @DoctestOrder(1)
+    public void getSomeCookies(HttpResponse response) {
+        ...
+    }
+    
+    @SimpleDoctest("http://localhost:12345/endpoint/which/needs/cookies")
+    @DoctestOrder(2)
+    public void useSomeCookies(HttpResponse response) {
+        // fails due to the NEW option in the cookie-store config ...
+    }
+
+}
+```
+
+The standard behaviour is to store cookie from all responses and send them with all requests.
+But as mentioned above you can define scopes which methods should share cookies and which not.
+The scoping of cookies will allow you to handle multiple sessions in one Test-Case easily.
+
+```java
+RunWith(DoctestRunner.class)
+public class ShowcaseDoctest {
+
+    /**
+     * The cookies set here are not available for other requests.
+     */
+    @SimpleDoctest("http://localhost:12345/endpoint/which/sets/cookies")
+    @DoctestOrder(1)
+    @DoctestCookieConfig(name = "customScope", store = Store.NEW)
+    public void getSomeCookies(HttpResponse response) {
+        ...
+    }
+    
+    /**
+     * Test-Class wide availability of cookies.
+     */
+    @SimpleDoctest("http://localhost:12345/endpoint/which/sets/cookies")
+    @DoctestOrder(1)
+    public void getSomeCookiesForLaterUse(HttpResponse response) {
+        ...
+    }
+    
+    @SimpleDoctest("http://localhost:12345/endpoint/which/needs/cookies")
+    @DoctestOrder(2)
+    public void useSomeCookies(HttpResponse response) {
+        // succeed, because the cookies from getSomeCookiesForLaterUse are still available
+    }
+    
+    /**
+     * The cookie from here are only available for test-methods with the cookie-scope "specialScope".
+     */
+    @SimpleDoctest("http://localhost:12345/special/endpoint/which/sets/cookies")
+    @DoctestOrder(1)
+    @DoctestCookieConfig(name = "specialScope", store = Store.SHARE)
+    public void getSpecialCookies(HttpResponse response) {
+        ...
+    }
+    
+    @SimpleDoctest("http://localhost:12345/special/endpoint/which/needs/cookies")
+    @DoctestOrder(2)
+    @DoctestCookieConfig(name = "specialScope", store = Store.SHARE)
+    public void useSpecialCookies(HttpResponse response) {
+        // succeed, because the cookies from getSpecialCookies are only available here
+    }
+
+}
+```
+
 ## doctest method signatures
 
 Currently are only these doctest method signatures allowed:
@@ -351,7 +435,7 @@ JsonAssertUtils.assertExists("should fail", node, "//*[@name='node1.2']");
 
 If you are already familiar with XPath you see the powerful, easy to use response verification ...
 
-Another way (since version 1.4.0) would be to let the doctest lib deserialize the response entity for you:
+Another way (since version 1.5.0) would be to let the doctest lib deserialize the response entity for you:
 
 ```java
 RunWith(DoctestRunner.class)

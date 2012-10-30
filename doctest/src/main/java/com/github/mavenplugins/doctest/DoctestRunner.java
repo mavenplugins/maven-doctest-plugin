@@ -37,6 +37,7 @@ import org.apache.http.HttpRequest;
 import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthScope;
+import org.apache.http.client.CookieStore;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpGet;
@@ -48,17 +49,20 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.methods.HttpTrace;
 import org.apache.http.client.params.ClientPNames;
+import org.apache.http.client.protocol.ClientContext;
 import org.apache.http.client.protocol.RequestAcceptEncoding;
 import org.apache.http.client.protocol.ResponseContentEncoding;
 import org.apache.http.entity.BufferedHttpEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntity;
+import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpParams;
 import org.apache.http.params.HttpParamsNames;
+import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
 import org.junit.runners.BlockJUnit4ClassRunner;
@@ -72,6 +76,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.mavenplugins.doctest.DoctestConfig.AssertionMode;
+import com.github.mavenplugins.doctest.DoctestCookieConfig.Store;
 import com.github.mavenplugins.doctest.asserts.HttpResponseAssertUtils;
 import com.github.mavenplugins.doctest.expectations.ExpectHeader;
 import com.github.mavenplugins.doctest.expectations.ExpectHeaders;
@@ -159,6 +164,18 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
      * A mapping with content-types to {@link ResponseDeserializer} objects.
      */
     protected Map<String, ResponseDeserializer> responseDeserializers = new HashMap<String, ResponseDeserializer>();
+    /**
+     * A mapping with cookie stores.
+     */
+    protected Map<String, CookieStore> cookieStores = new HashMap<String, CookieStore>();
+    /**
+     * The standard store for cookies.
+     */
+    protected CookieStore defaultCookieStore;
+    /**
+     * The standard store strategy for cookies.
+     */
+    protected Store defaultCookieStoreStrategy = Store.SHARED;
     
     /**
      * constructs the runner with the given test class.
@@ -192,6 +209,21 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         responseDeserializers.put(ContentType.APPLICATION_ATOM_XML.getMimeType(), xmlDeserializer);
         responseDeserializers.put(ContentType.APPLICATION_SVG_XML.getMimeType(), xmlDeserializer);
         responseDeserializers.put(ContentType.TEXT_XML.getMimeType(), xmlDeserializer);
+        
+        if (!testClass.isAnnotationPresent(DoctestCookieConfig.class)) {
+            defaultCookieStore = new BasicCookieStore();
+        } else {
+            DoctestCookieConfig config = testClass.getAnnotation(DoctestCookieConfig.class);
+            
+            defaultCookieStoreStrategy = config.store();
+            if (config.name() != null && !config.name().trim().isEmpty()) {
+                if (config.store() == Store.NEW) {
+                    cookieStores.put(config.name(), null);
+                } else {
+                    cookieStores.put(config.name(), new BasicCookieStore());
+                }
+            }
+        }
     }
     
     /**
@@ -203,6 +235,24 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         
         list.addAll(getTestClass().getAnnotatedMethods(Doctest.class));
         list.addAll(getTestClass().getAnnotatedMethods(SimpleDoctest.class));
+        
+        if (cookieStores == null) {
+            cookieStores = new HashMap<String, CookieStore>();
+        }
+        cookieStores.clear();
+        
+        for (FrameworkMethod method : list) {
+            if (method.getMethod().isAnnotationPresent(DoctestCookieConfig.class)) {
+                DoctestCookieConfig config = method.getMethod().getAnnotation(DoctestCookieConfig.class);
+                if (config != null && config.name() != null && !config.name().trim().isEmpty()) {
+                    if (config.store() == Store.NEW) {
+                        cookieStores.put(config.name(), null);
+                    } else {
+                        cookieStores.put(config.name(), new BasicCookieStore());
+                    }
+                }
+            }
+        }
         
         Collections.sort(list, new Comparator<FrameworkMethod>() {
             
@@ -627,10 +677,14 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
     }
     
     private String extractContentType(HttpResponse response) {
-        String contentType = response.getEntity().getContentType().getValue();
+        String contentType = "";
         int index = 0;
         
-        if ((index = contentType.indexOf(';')) != -1) {
+        if (response.getEntity() != null && response.getEntity().getContentType() != null) {
+            contentType = response.getEntity().getContentType().getValue();
+        }
+        
+        if (contentType != null && (index = contentType.indexOf(';')) != -1) {
             contentType = contentType.substring(0, index);
         }
         
@@ -741,9 +795,13 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         int delay = doctestConfig == null ? 0 : doctestConfig.requestDelay();
         HttpResponse resp;
         byte[] tmp = null;
+        CookieStore cookieStore = getCookieStore(method);
+        HttpContext ctx = new BasicHttpContext();
         
         try {
-            resp = client.execute(request);
+            ctx.setAttribute(ClientContext.COOKIE_STORE, cookieStore);
+            
+            resp = client.execute(request, ctx);
             
             if (resp.getEntity() != null) {
                 resp.setEntity(new BufferedHttpEntity(resp.getEntity()));
@@ -767,6 +825,28 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         if (delay > 0) {
             Thread.sleep(delay);
         }
+    }
+    
+    /**
+     * Gets back the cookie store used by each request.
+     */
+    protected CookieStore getCookieStore(FrameworkMethod method) {
+        DoctestCookieConfig config = method.getMethod().getAnnotation(DoctestCookieConfig.class);
+        CookieStore cookieStore = defaultCookieStore;
+        
+        if (config != null) {
+            if (config.name() != null && !config.name().trim().isEmpty()) {
+                if (cookieStores.containsKey(config.name())) {
+                    if (cookieStores.get(config.name()) == null) {
+                        cookieStore = new BasicCookieStore();
+                    } else {
+                        cookieStore = cookieStores.get(config.name());
+                    }
+                }
+            }
+        }
+        
+        return cookieStore;
     }
     
     /**
