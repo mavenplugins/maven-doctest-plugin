@@ -3,7 +3,7 @@
     <parent>
         <artifactId>parent</artifactId>
         <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
-        <version>1.4.0</version>
+        <version>1.5.0</version>
         <relativePath>..</relativePath>
     </parent>
     <artifactId>doctesting</artifactId>
@@ -13,6 +13,7 @@
     <properties>
         <spring.version>3.1.1.RELEASE</spring.version>
         <slf4j.version>1.6.1</slf4j.version>
+        <servlet.api.version>2.5</servlet.api.version>
     </properties>
 
     <build>
@@ -91,6 +92,11 @@
     </build>
 
     <dependencies>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
+            <version>${servlet.api.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest</artifactId>
