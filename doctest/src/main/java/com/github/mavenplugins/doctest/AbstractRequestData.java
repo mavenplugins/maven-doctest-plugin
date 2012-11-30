@@ -3,6 +3,8 @@ package com.github.mavenplugins.doctest;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
 
 import org.apache.http.Header;
@@ -23,8 +25,25 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public abstract class AbstractRequestData implements RequestData {
     
     /**
+     * Gets the uri for a doctest.
+     */
+    @Override
+    public URI getURI() throws URISyntaxException {
+        return null;
+    }
+    
+    /**
+     * Gets null back.
+     */
+    @Override
+    public String getPath() {
+        return null;
+    }
+    
+    /**
      * Gets a null back.
      */
+    @Override
     public HttpParams getParameters() {
         return null;
     }
@@ -32,6 +51,7 @@ public abstract class AbstractRequestData implements RequestData {
     /**
      * Gets a "GET".
      */
+    @Override
     public String getMethod() {
         return HttpGet.METHOD_NAME;
     }
@@ -39,6 +59,7 @@ public abstract class AbstractRequestData implements RequestData {
     /**
      * Gets a null back.
      */
+    @Override
     public Header[] getHeaders() {
         return null;
     }
@@ -46,6 +67,7 @@ public abstract class AbstractRequestData implements RequestData {
     /**
      * Gets a null back.
      */
+    @Override
     public HttpEntity getHttpEntity() {
         return null;
     }
@@ -53,6 +75,7 @@ public abstract class AbstractRequestData implements RequestData {
     /**
      * Gets a null back.
      */
+    @Override
     public Credentials getCredentials() {
         return null;
     }
@@ -60,6 +83,7 @@ public abstract class AbstractRequestData implements RequestData {
     /**
      * Configures the client as needed.
      */
+    @Override
     public void configureClient(DefaultHttpClient client) {
     }
     

@@ -22,7 +22,7 @@ The maven dependency for doctesting::
 <dependency>
     <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
     <artifactId>doctest</artifactId>
-    <version>1.5.0</version>
+    <version>1.6.0</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -36,7 +36,7 @@ The maven reporting-plugin::
         <plugin>
             <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest-plugin</artifactId>
-            <version>1.5.0</version>
+            <version>1.6.0</version>
         </plugin>
         ...
     </plugins>
@@ -131,7 +131,7 @@ The maven configuration looks like:
             <plugin>
                 <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
-                <version>1.5.0</version>
+                <version>1.6.0</version>
                 <dependencies>
                     <dependency>
                         <groupId>junit</groupId>
@@ -156,7 +156,7 @@ The maven configuration looks like:
         <dependency>
             <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest</artifactId>
-            <version>1.5.0</version>
+            <version>1.6.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -173,7 +173,7 @@ The maven configuration looks like:
             <plugin>
                 <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
-                <version>1.5.0</version>
+                <version>1.6.0</version>
             </plugin>
         </plugins>
     </reporting>
@@ -248,6 +248,56 @@ Options:
 * allowCircularRedirects
 * maxRedirects
 * enableCompression
+
+## setting default values
+
+Since version 1.6.0 of the doctest library one has the ability to set default values
+for the host, port, protocol (scheme) and the context path in which the application runs.
+
+```java
+RunWith(DoctestRunner.class)
+@DoctestHost(host = "localhost", port = 12345)
+public class ShowcaseDoctest {
+
+    @SimpleDoctest("/my/endpoint")
+    public void test(HttpResponse response) {
+        // request to http://localhost:12345/my/endpoint
+    }
+
+}
+```
+
+The ``@DoctestHost`` annotation is used to configure the connection defaults for a test-class.
+It can be applied at class-level or method-level with the following constraints:
+
+* class-level appliances mean a general configuration for all doctests in that test-class
+* method-level annotation override particular values (or all) of the class-level annotation
+* URI's returned from the ``RequestData.getURI()`` method will be override both class and method-level values (``com.github.mavenplugins.doctest.AbstractRequestData.getURI()`` returns ``null`` be default)
+
+```java
+RunWith(DoctestRunner.class)
+@DoctestHost(host = "localhost", port = 12345)
+public class ShowcaseDoctest {
+
+    @SimpleDoctest("/my/endpoint")
+    public void test1(HttpResponse response) {
+        // request to http://localhost:12345/my/endpoint
+    }
+
+    @SimpleDoctest("/endpoint")
+    @DoctestHost(contextPath = "/my/")
+    public void test2(HttpResponse response) {
+        // request to http://localhost:12345/my/endpoint
+    }
+    
+    @SimpleDoctest("/a/whole/other/service")
+    @DoctestHost(port = 8080)
+    public void test3(HttpResponse response) {
+        // request to http://localhost:8080/a/whole/other/service
+    }
+
+}
+```
 
 ## stress-testing an endpoint
 
@@ -388,7 +438,7 @@ Currently are only these doctest method signatures allowed:
 * public void ``name``(org.apache.http.HttpResponse, org.w3c.dom.Document)
 * public void ``name``(org.apache.http.HttpResponse, byte[])
 * public void ``name``(org.apache.http.HttpResponse, java.lang.String)
-* public void ``name``(org.apache.http.HttpResponse, <any java bean>)
+* public void ``name``(org.apache.http.HttpResponse, *any java bean that is automatically deserialized*)
 
 A doctest-methods also have to be annotated with ``@Doctest`` (or ``@SimpleDoctest``).
 Methods annotated with ``@Test`` are entirely ignored.

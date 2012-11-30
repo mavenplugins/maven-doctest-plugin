@@ -7,8 +7,10 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -176,12 +178,19 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
      * The standard store strategy for cookies.
      */
     protected Store defaultCookieStoreStrategy = Store.SHARED;
+    /**
+     * The default test uri.
+     */
+    protected URI defaultURI;
     
     /**
      * constructs the runner with the given test class.
+     * 
+     * @throws URISyntaxException May throws an URISyntaxException when instantiating the default URI.
      */
-    public DoctestRunner(Class<?> testClass) throws InvocationTargetException, InitializationError {
+    public DoctestRunner(Class<?> testClass) throws InvocationTargetException, InitializationError, URISyntaxException {
         super(testClass);
+        
         if (!path.exists()) {
             path.mkdirs();
         }
@@ -224,6 +233,20 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
                 }
             }
         }
+        
+        defaultURI = getURI(testClass);
+    }
+    
+    protected URI getURI(AnnotatedElement element) throws URISyntaxException {
+        DoctestHost doctestHost;
+        
+        if (element.isAnnotationPresent(DoctestHost.class)) {
+            doctestHost = element.getAnnotation(DoctestHost.class);
+            return new URI(doctestHost.scheme(), null, doctestHost.host(), doctestHost.port(),
+                    doctestHost.contextPath(), null, null);
+        }
+        
+        return null;
     }
     
     /**
@@ -613,26 +636,86 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
     /**
      * Builds the request based on the specified data..
      */
-    protected HttpRequestBase buildRequest(RequestData requestData) throws URISyntaxException {
+    protected HttpRequestBase buildRequest(RequestData requestData, Method method) throws URISyntaxException {
         HttpRequestBase request = null;
-        if (HttpGet.METHOD_NAME.equalsIgnoreCase(requestData.getMethod())) {
-            request = new HttpGet(requestData.getURI());
-        } else if (HttpPost.METHOD_NAME.equalsIgnoreCase(requestData.getMethod())) {
-            request = new HttpPost(requestData.getURI());
-        } else if (HttpPut.METHOD_NAME.equalsIgnoreCase(requestData.getMethod())) {
-            request = new HttpPut(requestData.getURI());
-        } else if (HttpOptions.METHOD_NAME.equalsIgnoreCase(requestData.getMethod())) {
-            request = new HttpOptions(requestData.getURI());
-        } else if (HttpHead.METHOD_NAME.equalsIgnoreCase(requestData.getMethod())) {
-            request = new HttpHead(requestData.getURI());
-        } else if (HttpDelete.METHOD_NAME.equalsIgnoreCase(requestData.getMethod())) {
-            request = new HttpDelete(requestData.getURI());
-        } else if (HttpPatch.METHOD_NAME.equalsIgnoreCase(requestData.getMethod())) {
-            request = new HttpPatch(requestData.getURI());
-        } else if (HttpTrace.METHOD_NAME.equalsIgnoreCase(requestData.getMethod())) {
-            request = new HttpTrace(requestData.getURI());
+        URI uri = requestData.getURI();
+        URI methodURI = getURI(method);
+        URI requestURI = null;
+        String path;
+        
+        if (uri == null) {
+            path = getPath(methodURI, defaultURI);
+            
+            if (path != null) {
+                if (path.endsWith("/") && requestData.getPath().startsWith("/")) {
+                    path = path.substring(0, path.length() - 1);
+                }
+                path = path + requestData.getPath();
+            } else {
+                path = requestData.getPath();
+            }
+            
+            requestURI = new URI(getScheme(methodURI, defaultURI), getUserInfo(methodURI, defaultURI), getHost(
+                    methodURI, defaultURI), getPort(methodURI, defaultURI), path, getQuery(methodURI, defaultURI),
+                    getFragment(methodURI, defaultURI));
+            
+            uri = requestURI;
         }
+        
+        if (HttpGet.METHOD_NAME.equalsIgnoreCase(requestData.getMethod())) {
+            request = new HttpGet(uri);
+        } else if (HttpPost.METHOD_NAME.equalsIgnoreCase(requestData.getMethod())) {
+            request = new HttpPost(uri);
+        } else if (HttpPut.METHOD_NAME.equalsIgnoreCase(requestData.getMethod())) {
+            request = new HttpPut(uri);
+        } else if (HttpOptions.METHOD_NAME.equalsIgnoreCase(requestData.getMethod())) {
+            request = new HttpOptions(uri);
+        } else if (HttpHead.METHOD_NAME.equalsIgnoreCase(requestData.getMethod())) {
+            request = new HttpHead(uri);
+        } else if (HttpDelete.METHOD_NAME.equalsIgnoreCase(requestData.getMethod())) {
+            request = new HttpDelete(uri);
+        } else if (HttpPatch.METHOD_NAME.equalsIgnoreCase(requestData.getMethod())) {
+            request = new HttpPatch(uri);
+        } else if (HttpTrace.METHOD_NAME.equalsIgnoreCase(requestData.getMethod())) {
+            request = new HttpTrace(uri);
+        }
+        
         return request;
+    }
+    
+    protected String getScheme(URI uri1, URI uri2) {
+        return uri1 != null && uri1.getScheme() != null ? uri1.getScheme()
+                : (uri2 != null && uri2.getScheme() != null ? uri2.getScheme() : null);
+    }
+    
+    protected int getPort(URI uri1, URI uri2) {
+        return uri1 != null && uri1.getPort() != -1 ? uri1.getPort() : (uri2 != null && uri2.getPort() != -1 ? uri2
+                .getPort() : 80);
+    }
+    
+    protected String getUserInfo(URI uri1, URI uri2) {
+        return uri1 != null && uri1.getUserInfo() != null ? uri1.getUserInfo() : (uri2 != null
+                && uri2.getUserInfo() != null ? uri2.getUserInfo() : null);
+    }
+    
+    protected String getHost(URI uri1, URI uri2) {
+        return uri1 != null && uri1.getHost() != null ? uri1.getHost() : (uri2 != null && uri2.getHost() != null ? uri2
+                .getHost() : null);
+    }
+    
+    protected String getPath(URI uri1, URI uri2) {
+        return uri1 != null && uri1.getPath() != null ? uri1.getPath() : (uri2 != null && uri2.getPath() != null ? uri2
+                .getPath() : null);
+    }
+    
+    protected String getQuery(URI uri1, URI uri2) {
+        return uri1 != null && uri1.getQuery() != null ? uri1.getQuery()
+                : (uri2 != null && uri2.getQuery() != null ? uri2.getQuery() : null);
+    }
+    
+    protected String getFragment(URI uri1, URI uri2) {
+        return uri1 != null && uri1.getFragment() != null ? uri1.getFragment() : (uri2 != null
+                && uri2.getFragment() != null ? uri2.getFragment() : null);
     }
     
     /**
@@ -737,11 +820,12 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
     /**
      * Extracts the requestData from the doctest-method.
      */
-    protected RequestData[] getRequestData(final FrameworkMethod method, final Object test)
-            throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException {
+    protected RequestData[] getRequestData(final FrameworkMethod method, final Object test) throws Exception {
         RequestData[] requestData;
         final SimpleDoctest doctest;
         Class<? extends RequestData>[] requestClasses;
+        final String path;
+        final URI uri;
         
         if (method.getMethod().isAnnotationPresent(Doctest.class)) {
             requestClasses = method.getMethod().getAnnotation(Doctest.class).value();
@@ -752,11 +836,25 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
             }
         } else {
             doctest = method.getMethod().getAnnotation(SimpleDoctest.class);
+            
+            if (doctest.value().startsWith("/")) {
+                path = doctest.value();
+                uri = null;
+            } else {
+                path = null;
+                uri = new URI(doctest.value());
+            }
+            
             requestData = new RequestData[] { new AbstractRequestData() {
                 
                 @Override
                 public URI getURI() throws URISyntaxException {
-                    return new URI(doctest.value());
+                    return uri;
+                }
+                
+                @Override
+                public String getPath() {
+                    return path;
                 }
                 
                 @Override
@@ -928,7 +1026,7 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
         ResponseContext responseCtx = responses.get();
         HttpEntity entity;
         
-        request = buildRequest(requestData);
+        request = buildRequest(requestData, method.getMethod());
         setRequestLine(request, wrapper);
         
         if (requestData.getHeaders() != null) {
