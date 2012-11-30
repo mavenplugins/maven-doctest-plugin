@@ -25,6 +25,11 @@ public interface RequestData {
     String getMethod();
     
     /**
+     * Gets the path to the endpoint you want to test (need to start with /) - only applied if a {@link DoctestHost} is present at class or method level.
+     */
+    String getPath();
+    
+    /**
      * Gets the request parameters.
      */
     HttpParams getParameters();
