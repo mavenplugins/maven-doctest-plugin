@@ -29,9 +29,9 @@ public class OrderDoctest {
      * the second (64 concurrent users doing 1024 requests - the last response is passed to this method).
      */
     @SimpleDoctest("http://localhost:12345/order")
-    @DoctestConfig(maxConcurrentRequests = 64, requestCount = 1024, requestDelay = 1, assertionMode = AssertionMode.LAST)
+    @DoctestConfig(maxConcurrentRequests = 16, requestCount = 256, requestDelay = 1, assertionMode = AssertionMode.LAST)
     public void zero(HttpResponse response, byte[] entity) throws Exception {
-        assertEquals("1024", new String(entity));
+        assertEquals("256", new String(entity));
     }
     
     /**
@@ -49,7 +49,7 @@ public class OrderDoctest {
     @SimpleDoctest("http://localhost:12345/order")
     @DoctestOrder(Integer.MAX_VALUE)
     public void last(HttpResponse response, byte[] entity) throws Exception {
-        assertEquals("1025", new String(entity));
+        assertEquals("257", new String(entity));
     }
     
 }
