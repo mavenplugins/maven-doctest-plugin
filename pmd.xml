@@ -1,20 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<pmd version="4.3" timestamp="2012-11-30T23:08:19.391">
+<pmd version="4.3" timestamp="2012-12-05T18:53:18.227">
 <file name="D:\git\maven-doctest-plugin\doctest\src\main\java\com\github\mavenplugins\doctest\DoctestRunner.java">
-<violation beginline="431" endline="432" begincolumn="15" endcolumn="13" rule="EmptyCatchBlock" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="DoctestRunner" method="setRequestParameters" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#EmptyCatchBlock" priority="3">
+<violation beginline="351" endline="359" begincolumn="13" endcolumn="13" rule="CollapsibleIfStatements" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="DoctestRunner" method="getCookieStore" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#CollapsibleIfStatements" priority="3">
+These nested if statements could be combined
+</violation>
+<violation beginline="352" endline="358" begincolumn="17" endcolumn="17" rule="CollapsibleIfStatements" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="DoctestRunner" method="getCookieStore" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#CollapsibleIfStatements" priority="3">
+These nested if statements could be combined
+</violation>
+</file>
+<file name="D:\git\maven-doctest-plugin\doctest\src\main\java\com\github\mavenplugins\doctest\ReportingCollector.java">
+<violation beginline="125" endline="126" begincolumn="15" endcolumn="13" rule="EmptyCatchBlock" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="ReportingCollector" method="setRequestParameters" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#EmptyCatchBlock" priority="3">
 Avoid empty catch blocks
 </violation>
-<violation beginline="486" endline="488" begincolumn="20" endcolumn="13" rule="EmptyIfStmt" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="DoctestRunner" method="saveResponse" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#EmptyIfStmt" priority="3">
+<violation beginline="180" endline="182" begincolumn="20" endcolumn="13" rule="EmptyIfStmt" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="ReportingCollector" method="saveResponse" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#EmptyIfStmt" priority="3">
 Avoid empty if statements
 </violation>
-<violation beginline="542" endline="543" begincolumn="15" endcolumn="13" rule="EmptyCatchBlock" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="DoctestRunner" method="setResponseParameters" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#EmptyCatchBlock" priority="3">
+<violation beginline="236" endline="237" begincolumn="15" endcolumn="13" rule="EmptyCatchBlock" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="ReportingCollector" method="setResponseParameters" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#EmptyCatchBlock" priority="3">
 Avoid empty catch blocks
-</violation>
-<violation beginline="936" endline="944" begincolumn="13" endcolumn="13" rule="CollapsibleIfStatements" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="DoctestRunner" method="getCookieStore" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#CollapsibleIfStatements" priority="3">
-These nested if statements could be combined
-</violation>
-<violation beginline="937" endline="943" begincolumn="17" endcolumn="17" rule="CollapsibleIfStatements" ruleset="Basic Rules" package="com.github.mavenplugins.doctest" class="DoctestRunner" method="getCookieStore" externalInfoUrl="http://pmd.sourceforge.net/rules/basic.html#CollapsibleIfStatements" priority="3">
-These nested if statements could be combined
 </violation>
 </file>
 </pmd>

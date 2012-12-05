@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <pmd-cpd>
 <duplication lines="35" tokens="203">
-<file line="380" path="D:\git\maven-doctest-plugin\plugin\src\main\java\com\github\mavenplugins\doctest\ReportMojo.java"/>
-<file line="448" path="D:\git\maven-doctest-plugin\plugin\src\main\java\com\github\mavenplugins\doctest\ReportMojo.java"/>
+<file line="384" path="D:\git\maven-doctest-plugin\plugin\src\main\java\com\github\mavenplugins\doctest\ReportMojo.java"/>
+<file line="452" path="D:\git\maven-doctest-plugin\plugin\src\main\java\com\github\mavenplugins\doctest\ReportMojo.java"/>
 <codefragment>
 <![CDATA[
         builder.append("<div id=\"request-detail-");
@@ -44,8 +44,8 @@
 </codefragment>
 </duplication>
 <duplication lines="22" tokens="155">
-<file line="359" path="D:\git\maven-doctest-plugin\plugin\src\main\java\com\github\mavenplugins\doctest\ReportMojo.java"/>
-<file line="427" path="D:\git\maven-doctest-plugin\plugin\src\main\java\com\github\mavenplugins\doctest\ReportMojo.java"/>
+<file line="363" path="D:\git\maven-doctest-plugin\plugin\src\main\java\com\github\mavenplugins\doctest\ReportMojo.java"/>
+<file line="431" path="D:\git\maven-doctest-plugin\plugin\src\main\java\com\github\mavenplugins\doctest\ReportMojo.java"/>
 <codefragment>
 <![CDATA[
         builder.append("</a><br/><div id=\"request-detail-");

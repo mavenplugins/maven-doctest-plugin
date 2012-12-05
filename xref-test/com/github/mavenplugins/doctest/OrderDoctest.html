@@ -39,9 +39,9 @@
 <a class="jxr_linenumber" name="29" href="#29">29</a>  <em class="jxr_javadoccomment">     * the second (64 concurrent users doing 1024 requests - the last response is passed to this method).</em>
 <a class="jxr_linenumber" name="30" href="#30">30</a>  <em class="jxr_javadoccomment">     */</em>
 <a class="jxr_linenumber" name="31" href="#31">31</a>      @SimpleDoctest(<span class="jxr_string">"http://localhost:12345/order"</span>)
-<a class="jxr_linenumber" name="32" href="#32">32</a>      @DoctestConfig(maxConcurrentRequests = 64, requestCount = 1024, requestDelay = 1, assertionMode = AssertionMode.LAST)
+<a class="jxr_linenumber" name="32" href="#32">32</a>      @DoctestConfig(maxConcurrentRequests = 16, requestCount = 256, requestDelay = 1, assertionMode = AssertionMode.LAST)
 <a class="jxr_linenumber" name="33" href="#33">33</a>      <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> zero(HttpResponse response, byte[] entity) <strong class="jxr_keyword">throws</strong> Exception {
-<a class="jxr_linenumber" name="34" href="#34">34</a>          assertEquals(<span class="jxr_string">"1024"</span>, <strong class="jxr_keyword">new</strong> String(entity));
+<a class="jxr_linenumber" name="34" href="#34">34</a>          assertEquals(<span class="jxr_string">"256"</span>, <strong class="jxr_keyword">new</strong> String(entity));
 <a class="jxr_linenumber" name="35" href="#35">35</a>      }
 <a class="jxr_linenumber" name="36" href="#36">36</a>      
 <a class="jxr_linenumber" name="37" href="#37">37</a>      <em class="jxr_javadoccomment">/**</em>
@@ -59,7 +59,7 @@
 <a class="jxr_linenumber" name="49" href="#49">49</a>      @SimpleDoctest(<span class="jxr_string">"http://localhost:12345/order"</span>)
 <a class="jxr_linenumber" name="50" href="#50">50</a>      @DoctestOrder(Integer.MAX_VALUE)
 <a class="jxr_linenumber" name="51" href="#51">51</a>      <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> last(HttpResponse response, byte[] entity) <strong class="jxr_keyword">throws</strong> Exception {
-<a class="jxr_linenumber" name="52" href="#52">52</a>          assertEquals(<span class="jxr_string">"1025"</span>, <strong class="jxr_keyword">new</strong> String(entity));
+<a class="jxr_linenumber" name="52" href="#52">52</a>          assertEquals(<span class="jxr_string">"257"</span>, <strong class="jxr_keyword">new</strong> String(entity));
 <a class="jxr_linenumber" name="53" href="#53">53</a>      }
 <a class="jxr_linenumber" name="54" href="#54">54</a>      
 <a class="jxr_linenumber" name="55" href="#55">55</a>  }
