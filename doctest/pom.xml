@@ -3,7 +3,7 @@
     <parent>
         <artifactId>parent</artifactId>
         <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
-        <version>1.6.0</version>
+        <version>1.7.0</version>
         <relativePath>..</relativePath>
     </parent>
     <name>Doctest Library</name>
@@ -15,6 +15,7 @@
         <commons.io.version>2.1</commons.io.version>
         <jackson.version>2.0.2</jackson.version>
         <jxpath.version>1.3</jxpath.version>
+        <juel.version>2.2.5</juel.version>
     </properties>
     
     <dependencies>
@@ -70,6 +71,21 @@
             <groupId>commons-jxpath</groupId>
             <artifactId>commons-jxpath</artifactId>
             <version>${jxpath.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>de.odysseus.juel</groupId>
+            <artifactId>juel-api</artifactId>
+            <version>${juel.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>de.odysseus.juel</groupId>
+            <artifactId>juel-impl</artifactId>
+            <version>${juel.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>de.odysseus.juel</groupId>
+            <artifactId>juel-spi</artifactId>
+            <version>${juel.version}</version>
         </dependency>
     </dependencies>
     

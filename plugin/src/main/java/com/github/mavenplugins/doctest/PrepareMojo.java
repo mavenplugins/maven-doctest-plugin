@@ -72,11 +72,12 @@ public class PrepareMojo extends AbstractMojo {
     /**
      * Puts the path information to the java back-store.
      */
+    @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         try {
             prefs.sync();
             prefs.put(DoctestRunner.TEST_SOURCE_PATH, project.getBuild().getTestSourceDirectory());
-            prefs.put(DoctestRunner.RESULT_PATH, doctestResultPath);
+            prefs.put(ReportingCollector.RESULT_PATH, doctestResultPath);
         } catch (BackingStoreException exception) {
             getLog().error("error while setting test-class path to java back-store", exception);
         }

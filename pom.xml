@@ -10,7 +10,7 @@
     <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
     <artifactId>parent</artifactId>
     <packaging>pom</packaging>
-    <version>1.6.0</version>
+    <version>1.7.0</version>
 
     <name>Doctest Maven Plugin</name>
     <inceptionYear>2012</inceptionYear>
@@ -139,27 +139,11 @@
                         <quiet>true</quiet>
                         <encoding>${project.build.sourceEncoding}</encoding>
                     </configuration>
-                    <executions>
-                        <execution>
-                            <phase>verify</phase>
-                            <goals>
-                                <goal>jar</goal>
-                            </goals>
-                        </execution>
-                    </executions>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-source-plugin</artifactId>
                     <version>2.1.2</version>
-                    <executions>
-                        <execution>
-                            <phase>verify</phase>
-                            <goals>
-                                <goal>jar</goal>
-                            </goals>
-                        </execution>
-                    </executions>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -370,6 +354,30 @@
                                     <javadoc>${project.build.finalName}-javadoc.${project.packaging}</javadoc>
                                     <sources>${project.build.finalName}-sources.${project.packaging}</sources>
                                 </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
                             </execution>
                         </executions>
                     </plugin>
