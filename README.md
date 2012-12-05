@@ -22,7 +22,7 @@ The maven dependency for doctesting::
 <dependency>
     <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
     <artifactId>doctest</artifactId>
-    <version>1.6.0</version>
+    <version>1.7.0</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -36,7 +36,7 @@ The maven reporting-plugin::
         <plugin>
             <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest-plugin</artifactId>
-            <version>1.6.0</version>
+            <version>1.7.0</version>
         </plugin>
         ...
     </plugins>
@@ -131,7 +131,7 @@ The maven configuration looks like:
             <plugin>
                 <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
-                <version>1.6.0</version>
+                <version>1.7.0</version>
                 <dependencies>
                     <dependency>
                         <groupId>junit</groupId>
@@ -156,7 +156,7 @@ The maven configuration looks like:
         <dependency>
             <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest</artifactId>
-            <version>1.6.0</version>
+            <version>1.7.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -173,7 +173,7 @@ The maven configuration looks like:
             <plugin>
                 <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
-                <version>1.6.0</version>
+                <version>1.7.0</version>
             </plugin>
         </plugins>
     </reporting>
@@ -298,6 +298,43 @@ public class ShowcaseDoctest {
 
 }
 ```
+
+## storing response-data between requests
+
+Since every test-method runs stateless it's a bit tricky to share data between requests.
+The doctest-library is able to store cookies, headers and response-entities between requests
+with the ``DoctestStore`` and ``DoctestStores`` annotations.
+
+All value are stored in a ``java.util.Map`` each for every Doctest-Class.
+The ``id`` attribute of ``DoctestStore`` acts as key.
+The values can be used via the ``Java Unified Expression Language`` (JUEL - http://juel.sourceforge.net/index.html)
+in URL and / or path strings.
+
+Cookies are stored as ``org.apache.http.cookie.Cookie`` and Headers are stored as ``org.apache.http.Header``.
+The response-entities are stored as is.
+
+```java
+@RunWith(DoctestRunner.class)
+@DoctestHost(host = "localhost", port = 12345)
+public class CrossRequestStoreDoctest {
+    
+    @SimpleDoctest("/cross-request/setHeader")
+    @DoctestStore(id = "myHeaderVar", expression = "X-Header", source = Source.HEADER)
+    @DoctestOrder(1)
+    public void setHeader(HttpResponse response) {
+    }
+    
+    @SimpleDoctest(value = "/cross-request/withHeader/${myHeaderVar.value}", header = "${myHeaderVar.name}: ${myHeaderVar.value}")
+    @ExpectStatus(204)
+    @DoctestOrder(2)
+    public void withHeader(HttpResponse response, DoctestContext ctx) {
+        assertEquals("X-Header-Value", ((Header) ctx.getValue("myHeaderVar")).getValue());
+    }
+    
+}
+```
+
+Once a variable is stored it can be overridden by using the same store-id within another request.
 
 ## stress-testing an endpoint
 
@@ -433,16 +470,18 @@ public class ShowcaseDoctest {
 
 Currently are only these doctest method signatures allowed:
 
-* public void ``name``(org.apache.http.HttpResponse)
-* public void ``name``(org.apache.http.HttpResponse, com.fasterxml.jackson.databind.JsonNode)
-* public void ``name``(org.apache.http.HttpResponse, org.w3c.dom.Document)
-* public void ``name``(org.apache.http.HttpResponse, byte[])
-* public void ``name``(org.apache.http.HttpResponse, java.lang.String)
-* public void ``name``(org.apache.http.HttpResponse, *any java bean that is automatically deserialized*)
+* public void ``name``(org.apache.http.HttpResponse[, com.github.mavenplugins.doctest.DoctestContext])
+* public void ``name``(org.apache.http.HttpResponse[, com.github.mavenplugins.doctest.DoctestContext], com.fasterxml.jackson.databind.JsonNode)
+* public void ``name``(org.apache.http.HttpResponse[, com.github.mavenplugins.doctest.DoctestContext], org.w3c.dom.Document)
+* public void ``name``(org.apache.http.HttpResponse[, com.github.mavenplugins.doctest.DoctestContext], byte[])
+* public void ``name``(org.apache.http.HttpResponse[, com.github.mavenplugins.doctest.DoctestContext], java.lang.String)
+* public void ``name``(org.apache.http.HttpResponse[, com.github.mavenplugins.doctest.DoctestContext], *any java bean that is automatically deserialized*)
 
-A doctest-methods also have to be annotated with ``@Doctest`` (or ``@SimpleDoctest``).
+A doctest-method also have to be annotated with ``@Doctest`` (or ``@SimpleDoctest``).
 Methods annotated with ``@Test`` are entirely ignored.
 The test class have to be annotated ``@RunWith(DoctestRunner.class)``.
+
+The ``com.github.mavenplugins.doctest.DoctestContext`` parameter is optional and is interchangeable with the payload parameter.
 
 ## formating responses for the report
 

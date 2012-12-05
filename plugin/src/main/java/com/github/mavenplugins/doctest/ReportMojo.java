@@ -53,10 +53,11 @@ public class ReportMojo extends AbstractMavenReport {
     private static final String LINE_SEPARATOR = System.getProperty("line.separator");
     private static final Pattern JAVADOC_STAR_FINDER = Pattern.compile("^\\s*\\*\\s?", Pattern.MULTILINE);
     private static final Pattern JAVADOC_EMPTYLINE_FINDER = Pattern.compile("^\\s*\\*\\s*$", Pattern.MULTILINE);
-    private static final Pattern ANY_METHOD_FINDER = Pattern.compile(
-            "public\\s+void\\s+.*\\s*\\((HttpResponse|" + HttpResponse.class.getName().replaceAll("\\.", "\\\\.") + ")", Pattern.CASE_INSENSITIVE
-                    | Pattern.MULTILINE);
-    private static final SinkEventAttributeSet TABLE_CELL_STYLE_ATTRIBUTES = new SinkEventAttributeSet(new String[] { "style", "width:150px;" });
+    private static final Pattern ANY_METHOD_FINDER = Pattern.compile("public\\s+void\\s+.*\\s*\\((HttpResponse|"
+            + HttpResponse.class.getName().replaceAll("\\.", "\\\\.") + ")", Pattern.CASE_INSENSITIVE
+            | Pattern.MULTILINE);
+    private static final SinkEventAttributeSet TABLE_CELL_STYLE_ATTRIBUTES = new SinkEventAttributeSet(new String[] {
+            "style", "width:150px;" });
     private static final String JAVASCRIPT_CODE = "<script type=\"text/javascript\">function toggleVisibility(t){var e=document.getElementById(t);if(e.style.display=='block'){e.style.display='none';}else{e.style.display='block';}}</script>";
     
     /**
@@ -190,14 +191,17 @@ public class ReportMojo extends AbstractMavenReport {
         return project;
     }
     
+    @Override
     public String getOutputName() {
         return "doctests/index";
     }
     
+    @Override
     public String getName(Locale locale) {
         return getBundle(locale).getString("name");
     }
     
+    @Override
     public String getDescription(Locale locale) {
         return getBundle(locale).getString("description");
     }
@@ -225,7 +229,7 @@ public class ReportMojo extends AbstractMavenReport {
         
         try {
             prefs.sync();
-            doctestResults = prefs.get(DoctestRunner.RESULT_PATH, "");
+            doctestResults = prefs.get(ReportingCollector.RESULT_PATH, "");
             results = new File(doctestResults);
             prefs.removeNode();
         } catch (BackingStoreException exception) {
@@ -493,14 +497,16 @@ public class ReportMojo extends AbstractMavenReport {
             tmp = resultFile.getAbsolutePath();
             if (tmp.endsWith(".request")) {
                 tmp = tmp.substring(0, tmp.lastIndexOf('.'));
-                className = tmp.substring(doctestResultDirectoryName.length(), tmp.indexOf('-', doctestResultDirectoryName.length()));
+                className = tmp.substring(doctestResultDirectoryName.length(),
+                        tmp.indexOf('-', doctestResultDirectoryName.length()));
                 className = className.replaceAll("\\.", "/") + ".java";
                 doctestName = tmp.substring(tmp.indexOf('-', doctestResultDirectoryName.length()) + 1);
                 
                 try {
                     requestResult = mapper.readValue(new File(tmp + ".request"), RequestResultWrapper.class);
                     responseResult = mapper.readValue(new File(tmp + ".response"), ResponseResultWrapper.class);
-                    source = FileUtils.readFileToString(new File(project.getBuild().getTestSourceDirectory(), className));
+                    source = FileUtils
+                            .readFileToString(new File(project.getBuild().getTestSourceDirectory(), className));
                     
                     tmp = tmp.substring(doctestResultDirectoryName.length()).replace('-', '.');
                     endpoint = endpoints.get(requestResult.getPath());
@@ -538,9 +544,9 @@ public class ReportMojo extends AbstractMavenReport {
      * Gets the javadoc comment situated over a doctest method.
      */
     protected String getJavaDoc(String source, String method) {
-        Pattern methodPattern = Pattern.compile(
-                "public\\s+void\\s+" + method + "\\s*\\((HttpResponse|" + HttpResponse.class.getName().replaceAll("\\.", "\\\\.") + ")",
-                Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
+        Pattern methodPattern = Pattern.compile("public\\s+void\\s+" + method + "\\s*\\((HttpResponse|"
+                + HttpResponse.class.getName().replaceAll("\\.", "\\\\.") + ")", Pattern.CASE_INSENSITIVE
+                | Pattern.MULTILINE);
         Matcher matcher = methodPattern.matcher(source);
         int start, tmp, last, comment;
         String doc;
@@ -583,7 +589,8 @@ public class ReportMojo extends AbstractMavenReport {
      * Escapes a single string.
      */
     protected String escapeToHtml(String text) {
-        return StringUtils.replace(StringUtils.replace(HtmlTools.escapeHTML(text, false), "&amp;#", "&#"), LINE_SEPARATOR, "<br/>");
+        return StringUtils.replace(StringUtils.replace(HtmlTools.escapeHTML(text, false), "&amp;#", "&#"),
+                LINE_SEPARATOR, "<br/>");
     }
     
 }
