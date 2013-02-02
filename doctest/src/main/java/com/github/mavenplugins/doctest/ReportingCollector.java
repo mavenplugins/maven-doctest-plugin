@@ -1,6 +1,9 @@
 package com.github.mavenplugins.doctest;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
@@ -9,6 +12,9 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.prefs.Preferences;
+import java.util.zip.Deflater;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import org.apache.http.Header;
 import org.apache.http.HttpRequest;
@@ -16,12 +22,15 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.params.HttpParams;
 import org.apache.http.params.HttpParamsNames;
+import org.junit.runner.Description;
+import org.junit.runner.Result;
+import org.junit.runner.notification.RunListener;
 import org.junit.runners.model.FrameworkMethod;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.mavenplugins.doctest.formatter.EntityFormatter;
 
-public class ReportingCollector {
+public class ReportingCollector extends RunListener {
     
     /**
      * An empty array for copying purpose.
@@ -31,6 +40,10 @@ public class ReportingCollector {
      * The java backstore variable for the results of the doctests.
      */
     public static final String RESULT_PATH = "doctest.result.path";
+    /**
+     * The java backstore variable that indicates if result-data should be zipped.
+     */
+    public static final String STORE_AS_ZIPS = "doctest.result.zipped";
     
     /**
      * The java back-store.
@@ -40,6 +53,10 @@ public class ReportingCollector {
      * the directory for the test results.
      */
     protected File path = new File(prefs.get(RESULT_PATH, "./target/doctests/"));
+    /**
+     * store test-results as zip or not.
+     */
+    protected boolean asZip = Boolean.parseBoolean(prefs.get(STORE_AS_ZIPS, "true"));
     /**
      * The doctest class.
      */
@@ -52,6 +69,10 @@ public class ReportingCollector {
      * The json mapper.
      */
     protected ObjectMapper jsonMapper = new ObjectMapper();
+    /**
+     * The zip output stream.
+     */
+    protected ZipOutputStream zipOutputStream;
     
     /**
      * Initiates the util with the specified test class.
@@ -65,16 +86,97 @@ public class ReportingCollector {
         }
     }
     
+    @Override
+    public void testRunStarted(Description description) throws Exception {
+        File file = new File(path, testClass.getName() + ".zip");
+        if (asZip) {
+            zipOutputStream = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(file)));
+            zipOutputStream.setLevel(Deflater.BEST_COMPRESSION);
+        }
+    }
+    
+    /**
+     * Saves all request and response data of all testcases.
+     */
+    @Override
+    public void testRunFinished(Result result) throws Exception {
+        if (asZip) {
+            zipOutputStream.closeEntry();
+            zipOutputStream.flush();
+            zipOutputStream.close();
+        }
+    }
+    
+    /**
+     * Gets the print stream used to save the request - either based on the zip output stream or as plain file.
+     */
+    protected PrintStream getRequestPrintStream(FrameworkMethod method, RequestData requestClass) throws Exception {
+        PrintStream printStream = null;
+        File file = new File(path, getRequestResultFileName(method, requestClass));
+        
+        if (asZip) {
+            zipOutputStream.putNextEntry(new ZipEntry(file.getName()));
+            printStream = new PrintStream(new FilterOutputStream(zipOutputStream) {
+                
+                @Override
+                public void close() throws IOException {
+                }
+                
+            });
+        } else {
+            printStream = new PrintStream(file);
+        }
+        
+        return printStream;
+    }
+    
+    /**
+     * Gets the filename for the result file using the specified method.
+     */
+    protected String getRequestResultFileName(FrameworkMethod method, RequestData requestClass) {
+        return testClass.getName() + "-" + method.getName() + "-" + requestClass.getClass().getSimpleName()
+                + ".request";
+    }
+    
+    /**
+     * Gets the print stream used to save the response - either based on the zip output stream or as plain file.
+     */
+    protected PrintStream getResponsePrintStream(FrameworkMethod method, RequestData requestClass) throws Exception {
+        PrintStream printStream = null;
+        File file = new File(path, getResponseResultFileName(method, requestClass));
+        
+        if (asZip) {
+            zipOutputStream.putNextEntry(new ZipEntry(file.getName()));
+            printStream = new PrintStream(new FilterOutputStream(zipOutputStream) {
+                
+                @Override
+                public void close() throws IOException {
+                }
+                
+            });
+        } else {
+            printStream = new PrintStream(file);
+        }
+        
+        return printStream;
+    }
+    
+    /**
+     * Gets the filename for the response result file.
+     */
+    protected String getResponseResultFileName(FrameworkMethod method, RequestData requestClass) {
+        return testClass.getName() + "-" + method.getName() + "-" + requestClass.getClass().getSimpleName()
+                + ".response";
+    }
+    
     /**
      * Saves the request data for later reporting.
      */
     protected void saveRequest(FrameworkMethod method, Object test, RequestData requestClass, HttpRequest request,
             byte[] requestData, RequestResultWrapper wrapper) throws Exception {
-        File file = new File(path, getRequestResultFileName(method, requestClass));
-        PrintStream stream = null;
+        PrintStream stream = getRequestPrintStream(method, requestClass);
         
         try {
-            stream = new PrintStream(file);
             if (request instanceof HttpEntityEnclosingRequestBase && requestData != null) {
                 setRequestEntity(test, (HttpEntityEnclosingRequestBase) request, requestData, wrapper,
                         getFormatter(method));
@@ -84,14 +186,6 @@ public class ReportingCollector {
             stream.flush();
             stream.close();
         }
-    }
-    
-    /**
-     * Gets the filename for the result file using the specified method.
-     */
-    protected String getRequestResultFileName(FrameworkMethod method, RequestData requestClass) {
-        return testClass.getName() + "-" + method.getName() + "-" + requestClass.getClass().getSimpleName()
-                + ".request";
     }
     
     /**
@@ -164,13 +258,10 @@ public class ReportingCollector {
      */
     protected void saveResponse(FrameworkMethod method, Object test, RequestData requestClass, ResponseContext ctx)
             throws Exception {
-        File file = new File(path, getResponseResultFileName(method, requestClass));
-        PrintStream stream = null;
+        PrintStream stream = getResponsePrintStream(method, requestClass);
         ResponseResultWrapper wrapper;
         
         try {
-            stream = new PrintStream(file);
-            
             wrapper = new ResponseResultWrapper();
             if (ctx != null) {
                 setResponseLine(ctx, wrapper);
@@ -193,14 +284,6 @@ public class ReportingCollector {
         SimpleDoctest simpleDoctest = method.getMethod().getAnnotation(SimpleDoctest.class);
         
         return doctest == null ? simpleDoctest.formatter() : doctest.formatter();
-    }
-    
-    /**
-     * Gets the filename for the response result file.
-     */
-    protected String getResponseResultFileName(FrameworkMethod method, RequestData requestClass) {
-        return testClass.getName() + "-" + method.getName() + "-" + requestClass.getClass().getSimpleName()
-                + ".response";
     }
     
     /**

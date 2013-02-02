@@ -16,18 +16,18 @@ This project tries to enable java developers to benefit from the same testing co
 
 # How to get it
 
-The maven dependency for doctesting::
+The maven dependency for doctesting
 
 ```xml
 <dependency>
     <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
     <artifactId>doctest</artifactId>
-    <version>1.7.0</version>
+    <version>1.8.0</version>
     <scope>test</scope>
 </dependency>
 ```
 
-The maven reporting-plugin::
+The maven reporting-plugin
 
 ```xml
 <reporting>
@@ -36,14 +36,14 @@ The maven reporting-plugin::
         <plugin>
             <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest-plugin</artifactId>
-            <version>1.7.0</version>
+            <version>1.8.0</version>
         </plugin>
         ...
     </plugins>
 </reporting>
 ```
 
-And the corresponding repository::
+And the corresponding repository
 
 ```xml
 <repositories>
@@ -131,7 +131,7 @@ The maven configuration looks like:
             <plugin>
                 <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
-                <version>1.7.0</version>
+                <version>1.8.0</version>
                 <dependencies>
                     <dependency>
                         <groupId>junit</groupId>
@@ -156,7 +156,7 @@ The maven configuration looks like:
         <dependency>
             <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest</artifactId>
-            <version>1.7.0</version>
+            <version>1.8.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -173,7 +173,7 @@ The maven configuration looks like:
             <plugin>
                 <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
-                <version>1.7.0</version>
+                <version>1.8.0</version>
             </plugin>
         </plugins>
     </reporting>

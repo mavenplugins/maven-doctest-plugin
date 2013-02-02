@@ -41,6 +41,7 @@ import org.apache.http.params.HttpParams;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
+import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
@@ -146,6 +147,17 @@ public class DoctestRunner extends BlockJUnit4ClassRunner {
                     cookieStores.put(config.name(), new BasicCookieStore());
                 }
             }
+        }
+    }
+    
+    @Override
+    public void run(RunNotifier notifier) {
+        try {
+            reportingCollector.testRunStarted(null);
+            super.run(notifier);
+            reportingCollector.testRunFinished(null);
+        } catch (Exception exception) {
+            fail(exception.getLocalizedMessage());
         }
     }
     
