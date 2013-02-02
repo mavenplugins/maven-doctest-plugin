@@ -13,28 +13,23 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-package com.github.mavenplugins;
+package com.github.mavenplugins.doctest;
 
-import org.apache.maven.plugin.AbstractMojo;
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
+import org.apache.http.HttpResponse;
+import org.junit.runner.RunWith;
 
-/**
- * This Mojo reports doctest results.
- * 
- * @goal report
- */
-public class DoctestReportMojo extends AbstractMojo {
+import com.github.mavenplugins.doctest.expectations.ExpectStatus;
+
+@RunWith(DoctestRunner.class)
+public class RedirectDoctest {
     
     /**
-     * The format for the reporting results.
-     * 
-     * @parameter expression="${report.format}" default-value="markdown"
+     * Expects a redirect - normally the HTTP Client would follow the redirect and pass the result to this method.
      */
-    protected String format;
-    
-    public void execute() throws MojoExecutionException, MojoFailureException {
-        getLog().info("REPORTING HERE ...");
+    @SimpleDoctest("http://localhost:12345/redirect")
+    @DoctestClient(handleRedirects = false)
+    @ExpectStatus(302)
+    public void redirect(HttpResponse response) throws Exception {
     }
     
 }
