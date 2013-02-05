@@ -48,13 +48,6 @@ public class PrepareMojo extends AbstractMojo {
     private String doctestResultPath;
     
     /**
-     * Indicates if tmp. test-result-data should be stored inside a zip file instead of plain text (causes less files and a smaller workspace size).
-     * 
-     * @parameter expression="${project.reporting.doctests.storeResultsAsZips}" default-value="true"
-     */
-    private boolean storeResultsAsZips;
-    
-    /**
      * The preference back store is used to transfer data between this maven plugin and the actual doctests, which doesn't know anything about the maven project
      * configuration or this plugin.
      */
@@ -85,7 +78,6 @@ public class PrepareMojo extends AbstractMojo {
             prefs.sync();
             prefs.put(DoctestRunner.TEST_SOURCE_PATH, project.getBuild().getTestSourceDirectory());
             prefs.put(ReportingCollector.RESULT_PATH, doctestResultPath);
-            prefs.put(ReportingCollector.STORE_AS_ZIPS, Boolean.toString(storeResultsAsZips));
         } catch (BackingStoreException exception) {
             getLog().error("error while setting test-class path to java back-store", exception);
         }

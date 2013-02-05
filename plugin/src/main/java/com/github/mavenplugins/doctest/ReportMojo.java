@@ -15,8 +15,12 @@
  */
 package com.github.mavenplugins.doctest;
 
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FilterInputStream;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.ResourceBundle;
@@ -25,6 +29,8 @@ import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -485,59 +491,135 @@ public class ReportMojo extends AbstractMavenReport {
      */
     protected void parseDoctestResults(File doctestResultDirectory, String doctestResultDirectoryName) {
         String tmp;
+        String key;
         String className;
         String doctestName;
+        String requestDataClass;
+        String sourceName;
         String source;
         DoctestsContainer endpoint;
         DoctestData doctest;
         RequestResultWrapper requestResult;
         ResponseResultWrapper responseResult;
+        Map<String, RequestResultWrapper> requestResults = new HashMap<String, RequestResultWrapper>();
+        Map<String, ResponseResultWrapper> responseResults = new HashMap<String, ResponseResultWrapper>();
+        ZipInputStream zipInputStream;
+        ZipEntry zipEntry;
         
-        for (File resultFile : doctestResultDirectory.listFiles()) {
-            tmp = resultFile.getAbsolutePath();
-            if (tmp.endsWith(".request")) {
-                tmp = tmp.substring(0, tmp.lastIndexOf('.'));
-                className = tmp.substring(doctestResultDirectoryName.length(),
-                        tmp.indexOf('-', doctestResultDirectoryName.length()));
-                className = className.replaceAll("\\.", "/") + ".java";
-                doctestName = tmp.substring(tmp.indexOf('-', doctestResultDirectoryName.length()) + 1);
+        for (File resultFile : FileUtils.listFiles(doctestResultDirectory, new String[] { "zip" }, false)) {
+            zipInputStream = null;
+            
+            try {
+                zipInputStream = new ZipInputStream(new BufferedInputStream(new FileInputStream(resultFile)));
                 
-                try {
-                    requestResult = mapper.readValue(new File(tmp + ".request"), RequestResultWrapper.class);
-                    responseResult = mapper.readValue(new File(tmp + ".response"), ResponseResultWrapper.class);
-                    source = FileUtils
-                            .readFileToString(new File(project.getBuild().getTestSourceDirectory(), className));
+                while ((zipEntry = zipInputStream.getNextEntry()) != null) {
+                    tmp = zipEntry.getName();
                     
-                    tmp = tmp.substring(doctestResultDirectoryName.length()).replace('-', '.');
-                    endpoint = endpoints.get(requestResult.getPath());
-                    if (endpoint == null) {
-                        endpoint = new DoctestsContainer();
-                        endpoint.setName(requestResult.getPath());
-                        endpoints.put(requestResult.getPath(), endpoint);
+                    className = getClassName(tmp);
+                    doctestName = getDoctestName(tmp);
+                    requestDataClass = getRequestDataClass(tmp);
+                    sourceName = getSourceName(className);
+                    key = getKey(tmp);
+                    
+                    if (isRequest(tmp)) {
+                        requestResults.put(key, mapper.readValue(new FilterInputStream(zipInputStream) {
+                            
+                            @Override
+                            public void close() throws IOException {
+                            }
+                            
+                        }, RequestResultWrapper.class));
+                    } else if (isResponse(tmp)) {
+                        responseResults.put(key, mapper.readValue(new FilterInputStream(zipInputStream) {
+                            
+                            @Override
+                            public void close() throws IOException {
+                            }
+                            
+                        }, ResponseResultWrapper.class));
                     }
                     
-                    requestResult.setEntity(escapeToHtml(requestResult.getEntity()));
-                    requestResult.setPath(escapeToHtml(requestResult.getPath()));
-                    requestResult.setRequestLine(escapeToHtml(requestResult.getRequestLine()));
-                    requestResult.setHeader(escapeToHtml(requestResult.getHeader()));
-                    requestResult.setParemeters(escapeToHtml(requestResult.getParemeters()));
-                    
-                    responseResult.setEntity(escapeToHtml(responseResult.getEntity()));
-                    responseResult.setStatusLine(escapeToHtml(responseResult.getStatusLine()));
-                    responseResult.setHeader(escapeToHtml(responseResult.getHeader()));
-                    responseResult.setParemeters(escapeToHtml(responseResult.getParemeters()));
-                    
-                    doctest = new DoctestData();
-                    doctest.setJavaDoc(getJavaDoc(source, doctestName));
-                    doctest.setName(tmp);
-                    doctest.setRequest(requestResult);
-                    doctest.setResponse(responseResult);
-                    endpoint.getDoctests().put(tmp, doctest);
-                } catch (IOException exception) {
-                    getLog().error("error while reading doctest request", exception);
+                    if (requestResults.containsKey(key) && responseResults.containsKey(key)) {
+                        try {
+                            requestResult = requestResults.get(key);
+                            responseResult = responseResults.get(key);
+                            
+                            requestResults.remove(key);
+                            responseResults.remove(key);
+                            
+                            source = FileUtils.readFileToString(new File(project.getBuild().getTestSourceDirectory(),
+                                    sourceName));
+                            
+                            tmp = className + '.' + doctestName;
+                            endpoint = endpoints.get(requestResult.getPath());
+                            if (endpoint == null) {
+                                endpoint = new DoctestsContainer();
+                                endpoint.setName(requestResult.getPath());
+                                endpoints.put(requestResult.getPath(), endpoint);
+                            }
+                            
+                            requestResult.setEntity(escapeToHtml(requestResult.getEntity()));
+                            requestResult.setPath(escapeToHtml(requestResult.getPath()));
+                            requestResult.setRequestLine(escapeToHtml(requestResult.getRequestLine()));
+                            requestResult.setHeader(escapeToHtml(requestResult.getHeader()));
+                            requestResult.setParemeters(escapeToHtml(requestResult.getParemeters()));
+                            
+                            responseResult.setEntity(escapeToHtml(responseResult.getEntity()));
+                            responseResult.setStatusLine(escapeToHtml(responseResult.getStatusLine()));
+                            responseResult.setHeader(escapeToHtml(responseResult.getHeader()));
+                            responseResult.setParemeters(escapeToHtml(responseResult.getParemeters()));
+                            
+                            doctest = new DoctestData();
+                            doctest.setJavaDoc(getJavaDoc(source, doctestName));
+                            doctest.setName(tmp);
+                            doctest.setRequest(requestResult);
+                            doctest.setResponse(responseResult);
+                            endpoint.getDoctests().put(tmp, doctest);
+                        } catch (IOException exception) {
+                            getLog().error("error while reading doctest request", exception);
+                        }
+                    }
+                }
+            } catch (IOException exception) {
+                getLog().error("error while reading doctest request", exception);
+            } finally {
+                if (zipInputStream != null) {
+                    try {
+                        zipInputStream.close();
+                    } catch (IOException exception) {
+                        getLog().error("error while reading doctest request", exception);
+                    }
                 }
             }
         }
+    }
+    
+    private String getSourceName(String className) {
+        return className.replaceAll("\\.", "/") + ".java";
+    }
+    
+    private String getKey(String tmp) {
+        return tmp.substring(0, tmp.lastIndexOf('.'));
+    }
+    
+    private boolean isResponse(String tmp) {
+        return tmp.endsWith(".response");
+    }
+    
+    private boolean isRequest(String tmp) {
+        return tmp.endsWith(".request");
+    }
+    
+    private String getRequestDataClass(String tmp) {
+        return tmp.substring(tmp.lastIndexOf('-') + 1, tmp.lastIndexOf('.'));
+    }
+    
+    private String getDoctestName(String tmp) {
+        return tmp.substring(tmp.indexOf('-') + 1, tmp.lastIndexOf('-'));
+    }
+    
+    private String getClassName(String tmp) {
+        return tmp.substring(0, tmp.indexOf('-'));
     }
     
     /**

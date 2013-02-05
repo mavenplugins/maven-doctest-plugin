@@ -16,6 +16,7 @@
 package com.github.mavenplugins.doctest;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.http.HttpResponse;
 import org.junit.runner.RunWith;
@@ -26,12 +27,12 @@ import com.github.mavenplugins.doctest.DoctestConfig.AssertionMode;
 public class OrderDoctest {
     
     /**
-     * the second (64 concurrent users doing 1024 requests - the last response is passed to this method).
+     * the second (8 concurrent users doing 64 requests - the last response is passed to this method).
      */
     @SimpleDoctest("http://localhost:12345/order")
-    @DoctestConfig(maxConcurrentRequests = 16, requestCount = 256, requestDelay = 1, assertionMode = AssertionMode.LAST)
+    @DoctestConfig(maxConcurrentRequests = 8, requestCount = 64, requestDelay = 20, assertionMode = AssertionMode.LAST)
     public void zero(HttpResponse response, byte[] entity) throws Exception {
-        assertEquals("256", new String(entity));
+        assertTrue(Integer.parseInt(new String(entity)) >= 56);
     }
     
     /**
@@ -49,7 +50,7 @@ public class OrderDoctest {
     @SimpleDoctest("http://localhost:12345/order")
     @DoctestOrder(Integer.MAX_VALUE)
     public void last(HttpResponse response, byte[] entity) throws Exception {
-        assertEquals("257", new String(entity));
+        assertEquals("65", new String(entity));
     }
     
 }

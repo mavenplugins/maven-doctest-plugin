@@ -22,7 +22,7 @@ The maven dependency for doctesting
 <dependency>
     <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
     <artifactId>doctest</artifactId>
-    <version>1.8.0</version>
+    <version>1.8.1</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -36,7 +36,7 @@ The maven reporting-plugin
         <plugin>
             <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest-plugin</artifactId>
-            <version>1.8.0</version>
+            <version>1.8.1</version>
         </plugin>
         ...
     </plugins>
@@ -131,7 +131,7 @@ The maven configuration looks like:
             <plugin>
                 <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
-                <version>1.8.0</version>
+                <version>1.8.1</version>
                 <dependencies>
                     <dependency>
                         <groupId>junit</groupId>
@@ -156,7 +156,7 @@ The maven configuration looks like:
         <dependency>
             <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
             <artifactId>doctest</artifactId>
-            <version>1.8.0</version>
+            <version>1.8.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -173,7 +173,7 @@ The maven configuration looks like:
             <plugin>
                 <groupId>com.github.mavenplugins.maven-doctest-plugin</groupId>
                 <artifactId>doctest-plugin</artifactId>
-                <version>1.8.0</version>
+                <version>1.8.1</version>
             </plugin>
         </plugins>
     </reporting>
@@ -656,7 +656,7 @@ class Upload extends AbstractRequestData {
     
     @Override
     public HttpEntity getHttpEntity() {
-        return new ByteArrayEntity("{\"name\":\"Jack\",\"age\":34}".getBytes(), ContentType.APPLICATION_JSON);;
+        return new ByteArrayEntity("{\"name\":\"Jack\",\"age\":34}".getBytes(), ContentType.APPLICATION_JSON);
     }
     
 }

@@ -40,10 +40,6 @@ public class ReportingCollector extends RunListener {
      * The java backstore variable for the results of the doctests.
      */
     public static final String RESULT_PATH = "doctest.result.path";
-    /**
-     * The java backstore variable that indicates if result-data should be zipped.
-     */
-    public static final String STORE_AS_ZIPS = "doctest.result.zipped";
     
     /**
      * The java back-store.
@@ -53,10 +49,6 @@ public class ReportingCollector extends RunListener {
      * the directory for the test results.
      */
     protected File path = new File(prefs.get(RESULT_PATH, "./target/doctests/"));
-    /**
-     * store test-results as zip or not.
-     */
-    protected boolean asZip = Boolean.parseBoolean(prefs.get(STORE_AS_ZIPS, "true"));
     /**
      * The doctest class.
      */
@@ -89,10 +81,8 @@ public class ReportingCollector extends RunListener {
     @Override
     public void testRunStarted(Description description) throws Exception {
         File file = new File(path, testClass.getName() + ".zip");
-        if (asZip) {
-            zipOutputStream = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(file)));
-            zipOutputStream.setLevel(Deflater.BEST_COMPRESSION);
-        }
+        zipOutputStream = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(file)));
+        zipOutputStream.setLevel(Deflater.BEST_COMPRESSION);
     }
     
     /**
@@ -100,11 +90,9 @@ public class ReportingCollector extends RunListener {
      */
     @Override
     public void testRunFinished(Result result) throws Exception {
-        if (asZip) {
-            zipOutputStream.closeEntry();
-            zipOutputStream.flush();
-            zipOutputStream.close();
-        }
+        zipOutputStream.closeEntry();
+        zipOutputStream.flush();
+        zipOutputStream.close();
     }
     
     /**
@@ -114,18 +102,14 @@ public class ReportingCollector extends RunListener {
         PrintStream printStream = null;
         File file = new File(path, getRequestResultFileName(method, requestClass));
         
-        if (asZip) {
-            zipOutputStream.putNextEntry(new ZipEntry(file.getName()));
-            printStream = new PrintStream(new FilterOutputStream(zipOutputStream) {
-                
-                @Override
-                public void close() throws IOException {
-                }
-                
-            });
-        } else {
-            printStream = new PrintStream(file);
-        }
+        zipOutputStream.putNextEntry(new ZipEntry(file.getName()));
+        printStream = new PrintStream(new FilterOutputStream(zipOutputStream) {
+            
+            @Override
+            public void close() throws IOException {
+            }
+            
+        });
         
         return printStream;
     }
@@ -145,18 +129,14 @@ public class ReportingCollector extends RunListener {
         PrintStream printStream = null;
         File file = new File(path, getResponseResultFileName(method, requestClass));
         
-        if (asZip) {
-            zipOutputStream.putNextEntry(new ZipEntry(file.getName()));
-            printStream = new PrintStream(new FilterOutputStream(zipOutputStream) {
-                
-                @Override
-                public void close() throws IOException {
-                }
-                
-            });
-        } else {
-            printStream = new PrintStream(file);
-        }
+        zipOutputStream.putNextEntry(new ZipEntry(file.getName()));
+        printStream = new PrintStream(new FilterOutputStream(zipOutputStream) {
+            
+            @Override
+            public void close() throws IOException {
+            }
+            
+        });
         
         return printStream;
     }
