@@ -736,3 +736,7 @@ public class UploadDoctest {
     
 }
 ```
+
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/rstiller/maven-doctest-plugin/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
